@@ -1,0 +1,1278 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+
+:root {
+
+    --bg: #0f172a;
+
+    --panel: #1e293b;
+
+    --border: #334155;
+
+    --text: #f8fafc;
+
+    --muted: #94a3b8;
+
+    --green: #22c55e;
+
+    --red: #ef4444;
+
+    --yellow: #f59e0b;
+
+}
+
+
+/* ========================================= */
+/* BODY */
+/* ========================================= */
+
+body {
+
+    min-height: 100vh;
+
+    background: var(--bg);
+
+    color: var(--text);
+
+    font-family:
+        Arial,
+        Helvetica,
+        sans-serif;
+
+}
+
+
+/* ========================================= */
+/* DASHBOARD */
+/* ========================================= */
+
+.dashboard {
+
+    width: min(1500px, 94%);
+
+    margin: auto;
+
+    padding:
+        32px
+        0
+        50px;
+
+}
+
+
+/* ========================================= */
+/* HEADER */
+/* ========================================= */
+
+.header {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: flex-start;
+
+    gap: 20px;
+
+    margin-bottom: 28px;
+
+}
+
+
+.header h1 {
+
+    font-size:
+        clamp(
+            26px,
+            3vw,
+            38px
+        );
+
+}
+
+
+.header p {
+
+    margin-top: 8px;
+
+    color: var(--muted);
+
+    font-size: 15px;
+
+}
+
+
+/* ========================================= */
+/* STATUS */
+/* ========================================= */
+
+.status {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 9px;
+
+    padding:
+        9px
+        14px;
+
+    border-radius: 999px;
+
+    background:
+        rgba(
+            34,
+            197,
+            94,
+            0.08
+        );
+
+    border:
+        1px solid
+        rgba(
+            34,
+            197,
+            94,
+            0.25
+        );
+
+    color: var(--green);
+
+    font-size: 12px;
+
+    font-weight: bold;
+
+    white-space: nowrap;
+
+}
+
+
+.status-dot {
+
+    width: 9px;
+
+    height: 9px;
+
+    border-radius: 50%;
+
+    background: var(--green);
+
+    box-shadow:
+        0 0 12px
+        rgba(
+            34,
+            197,
+            94,
+            0.8
+        );
+
+    animation:
+        pulse 1.5s infinite;
+
+}
+
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.35;
+    }
+
+}
+
+
+/* ========================================= */
+/* SUMMARY CARDS */
+/* ========================================= */
+
+.cards {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 18px;
+
+    margin-bottom: 22px;
+
+}
+
+
+.card {
+
+    min-height: 125px;
+
+    padding: 22px;
+
+    background: var(--panel);
+
+    border:
+        1px solid
+        var(--border);
+
+    border-radius: 14px;
+
+}
+
+
+.card-title {
+
+    color: var(--muted);
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    margin-bottom: 14px;
+
+}
+
+
+.value {
+
+    font-size:
+        clamp(
+            30px,
+            3vw,
+            40px
+        );
+
+    font-weight: 800;
+
+}
+
+
+.high-value {
+
+    color: var(--red);
+
+}
+
+
+.medium-value {
+
+    color: var(--yellow);
+
+}
+
+
+/* ========================================= */
+/* PANEL */
+/* ========================================= */
+
+.panel {
+
+    background: var(--panel);
+
+    border:
+        1px solid
+        var(--border);
+
+    border-radius: 14px;
+
+    padding: 22px;
+
+    margin-bottom: 22px;
+
+}
+
+
+.panel-header {
+
+    margin-bottom: 18px;
+
+}
+
+
+.panel-header h2 {
+
+    font-size: 20px;
+
+}
+
+
+.panel-header p {
+
+    margin-top: 5px;
+
+    color: var(--muted);
+
+    font-size: 13px;
+
+}
+
+
+/* ========================================= */
+/* CHART CONTAINERS */
+/* ========================================= */
+
+.chart-container {
+
+    position: relative;
+
+    width: 100%;
+
+}
+
+
+/*
+   IMPORTANT
+
+   Fixed heights prevent Chart.js
+   from stretching the page vertically.
+*/
+
+.traffic-container {
+
+    height: 330px;
+
+}
+
+
+.attack-container {
+
+    height: 390px;
+
+}
+
+
+.chart-container canvas {
+
+    width: 100% !important;
+
+    height: 100% !important;
+
+    display: block;
+
+}
+
+
+.chart-empty {
+
+    position: absolute;
+
+    inset: 0;
+
+    display: none;
+
+    align-items: center;
+
+    justify-content: center;
+
+    color: var(--muted);
+
+    font-size: 14px;
+
+    pointer-events: none;
+
+}
+
+
+/* ========================================= */
+/* TABLE */
+/* ========================================= */
+
+.table-wrapper {
+
+    width: 100%;
+
+    overflow-x: auto;
+
+}
+
+
+table {
+
+    width: 100%;
+
+    min-width: 850px;
+
+    border-collapse: collapse;
+
+}
+
+
+th,
+td {
+
+    padding:
+        13px
+        12px;
+
+    text-align: left;
+
+    border-bottom:
+        1px solid
+        rgba(
+            51,
+            65,
+            85,
+            0.75
+        );
+
+    font-size: 13px;
+
+}
+
+
+th {
+
+    color: var(--muted);
+
+    font-weight: 600;
+
+}
+
+
+tbody tr:hover {
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.025
+        );
+
+}
+
+
+/* ========================================= */
+/* SEVERITY */
+/* ========================================= */
+
+.high {
+
+    color: var(--red);
+
+    font-weight: 800;
+
+}
+
+
+.medium {
+
+    color: var(--yellow);
+
+    font-weight: 800;
+
+}
+
+
+.ip-cell {
+
+    font-family:
+        Consolas,
+        "Courier New",
+        monospace;
+
+    white-space: nowrap;
+
+}
+
+
+.empty {
+
+    text-align: center;
+
+    padding: 35px;
+
+    color: var(--muted);
+
+}
+
+/* ========================================= */
+/* SYSTEM THREAT STATUS */
+/* ========================================= */
+
+.status {
+
+    transition:
+        background 0.3s ease,
+        border-color 0.3s ease,
+        color 0.3s ease;
+
+}
+
+.status-dot {
+
+    transition:
+        background 0.3s ease,
+        box-shadow 0.3s ease;
+
+}
+
+
+/* SECURE */
+
+.status.secure {
+
+    color: var(--green);
+
+    background:
+        rgba(34, 197, 94, 0.08);
+
+    border-color:
+        rgba(34, 197, 94, 0.25);
+
+}
+
+.status-dot.secure {
+
+    background: var(--green);
+
+    box-shadow:
+        0 0 12px
+        rgba(34, 197, 94, 0.8);
+
+}
+
+
+/* WARNING */
+
+.status.warning {
+
+    color: var(--yellow);
+
+    background:
+        rgba(245, 158, 11, 0.08);
+
+    border-color:
+        rgba(245, 158, 11, 0.3);
+
+}
+
+.status-dot.warning {
+
+    background: var(--yellow);
+
+    box-shadow:
+        0 0 12px
+        rgba(245, 158, 11, 0.8);
+
+}
+
+
+/* CRITICAL */
+
+.status.critical {
+
+    color: var(--red);
+
+    background:
+        rgba(239, 68, 68, 0.08);
+
+    border-color:
+        rgba(239, 68, 68, 0.3);
+
+}
+
+.status-dot.critical {
+
+    background: var(--red);
+
+    box-shadow:
+        0 0 12px
+        rgba(239, 68, 68, 0.8);
+
+}
+
+
+/* ========================================= */
+/* RESPONSIVE */
+/* ========================================= */
+
+@media (max-width: 1000px) {
+
+    .cards {
+
+        grid-template-columns:
+            repeat(2, 1fr);
+
+    }
+
+
+    .header {
+
+        flex-direction: column;
+
+    }
+
+}
+
+
+@media (max-width: 600px) {
+
+    .dashboard {
+
+        width: 94%;
+
+        padding-top: 20px;
+
+    }
+
+
+    .cards {
+
+        grid-template-columns: 1fr;
+
+    }
+
+
+    .panel {
+
+        padding: 16px;
+
+    }
+
+
+    .traffic-container {
+
+        height: 270px;
+
+    }
+
+
+    .attack-container {
+
+        height: 300px;
+
+    }
+
+}
+/* ========================================= */
+/* IDS CONTROLS */
+/* ========================================= */
+
+.header-controls {
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: flex-end;
+
+    gap: 10px;
+
+}
+
+
+.control-buttons {
+
+    display: flex;
+
+    gap: 8px;
+
+}
+
+
+.control-btn {
+
+    border: none;
+
+    border-radius: 8px;
+
+    padding: 9px 13px;
+
+    color: var(--text);
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.2s,
+        opacity 0.2s;
+
+}
+
+
+.control-btn:hover {
+
+    transform: translateY(-2px);
+
+    opacity: 0.9;
+
+}
+
+
+.start-btn {
+
+    background: rgba(
+        34,
+        197,
+        94,
+        0.18
+    );
+
+    border:
+        1px solid
+        rgba(
+            34,
+            197,
+            94,
+            0.4
+        );
+
+    color: var(--green);
+
+}
+
+
+.stop-btn {
+
+    background: rgba(
+        239,
+        68,
+        68,
+        0.12
+    );
+
+    border:
+        1px solid
+        rgba(
+            239,
+            68,
+            68,
+            0.35
+        );
+
+    color: var(--red);
+
+}
+
+
+.clear-btn {
+
+    background: rgba(
+        245,
+        158,
+        11,
+        0.12
+    );
+
+    border:
+        1px solid
+        rgba(
+            245,
+            158,
+            11,
+            0.35
+        );
+
+    color: var(--yellow);
+
+}/* ============================================================
+   FLOATING IDS NOTIFICATION
+   ============================================================ */
+
+.notification {
+
+    position: fixed;
+
+    top: 95px;
+    right: 28px;
+
+    min-width: 300px;
+    max-width: 420px;
+
+    padding: 14px 18px;
+
+    border-radius: 10px;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    color: #ffffff;
+
+    background: var(--panel);
+
+    border: 1px solid var(--border);
+
+    box-shadow:
+        0 12px 35px rgba(0, 0, 0, 0.4);
+
+    z-index: 9999;
+
+    opacity: 0;
+
+    transform: translateY(-15px);
+
+    pointer-events: none;
+
+    transition:
+        opacity 0.3s ease,
+        transform 0.3s ease;
+}
+
+
+/* ============================================================
+   SHOW
+   ============================================================ */
+
+.notification.show {
+
+    opacity: 1;
+
+    transform: translateY(0);
+
+}
+
+
+/* ============================================================
+   SUCCESS
+   ============================================================ */
+
+.notification.success {
+
+    border-left:
+        4px solid var(--green);
+
+    background:
+        rgba(34, 197, 94, 0.10);
+
+}
+
+
+/* ============================================================
+   WARNING
+   ============================================================ */
+
+.notification.warning {
+
+    border-left:
+        4px solid var(--yellow);
+
+    background:
+        rgba(245, 158, 11, 0.10);
+
+}
+
+
+/* ============================================================
+   ERROR
+   ============================================================ */
+
+.notification.error {
+
+    border-left:
+        4px solid var(--red);
+
+    background:
+        rgba(239, 68, 68, 0.10);
+
+}
+/* ========================================= */
+/* IDS STOPPED STATUS */
+/* ========================================= */
+
+.status.stopped {
+
+    color: var(--muted);
+
+    background:
+        rgba(
+            148,
+            163,
+            184,
+            0.08
+        );
+
+    border-color:
+        rgba(
+            148,
+            163,
+            184,
+            0.25
+        );
+
+}
+
+
+.status-dot.stopped {
+
+    background: var(--muted);
+
+    box-shadow:
+        none;
+
+    animation: none;
+
+}
+
+/* ============================================================
+   DISABLED CONTROL BUTTON
+   ============================================================ */
+
+.control-btn:disabled {
+
+    opacity: 0.4;
+
+    cursor: not-allowed;
+
+    transform: none;
+
+    filter: grayscale(0.3);
+
+}
+
+
+/* Prevent hover animation when disabled */
+
+.control-btn:disabled:hover {
+
+    opacity: 0.4;
+
+    transform: none;
+
+}
+
+/* ============================================================
+   LIVE MONITOR INDICATOR
+   ============================================================ */
+
+.monitor-status {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: flex-end;
+
+    gap: 8px;
+
+    font-size: 11px;
+
+    font-weight: 800;
+
+    letter-spacing: 1px;
+
+    color: var(--green);
+
+}
+
+
+/* LIVE DOT */
+
+.live-dot {
+
+    width: 8px;
+
+    height: 8px;
+
+    border-radius: 50%;
+
+    background: var(--green);
+
+    box-shadow:
+        0 0 10px
+        rgba(34, 197, 94, 0.8);
+
+    animation:
+        livePulse 1.4s infinite;
+
+}
+
+
+@keyframes livePulse {
+
+    0%,
+    100% {
+
+        opacity: 1;
+
+        transform: scale(1);
+
+    }
+
+    50% {
+
+        opacity: 0.35;
+
+        transform: scale(0.8);
+
+    }
+
+}
+
+
+/* ============================================================
+   STOPPED STATE
+   ============================================================ */
+
+.monitor-status.stopped {
+
+    color: var(--muted);
+
+}
+
+
+.monitor-status.stopped .live-dot {
+
+    background: var(--muted);
+
+    box-shadow: none;
+
+    animation: none;
+
+}
+
+/* ============================================================
+   SECURITY EVENTS
+   ============================================================ */
+
+.alert-header {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    gap: 20px;
+
+}
+
+
+.alert-count {
+
+    color: var(--muted);
+
+    font-size: 13px;
+
+    white-space: nowrap;
+
+}
+
+
+.alert-count span {
+
+    color: var(--text);
+
+    font-size: 18px;
+
+    font-weight: 800;
+
+}
+
+
+/* ============================================================
+   ALERT FILTERS
+   ============================================================ */
+
+.alert-filters {
+
+    display: flex;
+
+    align-items: flex-end;
+
+    gap: 12px;
+
+    margin-bottom: 18px;
+
+    padding: 14px;
+
+    background: rgba(
+        15,
+        23,
+        42,
+        0.55
+    );
+
+    border: 1px solid var(--border);
+
+    border-radius: 10px;
+
+}
+
+
+.filter-group {
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 6px;
+
+}
+
+
+.filter-group label {
+
+    color: var(--muted);
+
+    font-size: 11px;
+
+    font-weight: 700;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.5px;
+
+}
+
+
+.filter-group select {
+
+    min-width: 170px;
+
+    padding: 9px 12px;
+
+    border-radius: 7px;
+
+    border: 1px solid var(--border);
+
+    background: var(--panel);
+
+    color: var(--text);
+
+    font-size: 12px;
+
+    cursor: pointer;
+
+    outline: none;
+
+}
+
+
+.filter-group select:focus {
+
+    border-color: var(--green);
+
+}
+
+
+.filter-reset-btn {
+
+    padding: 9px 13px;
+
+    border-radius: 7px;
+
+    border: 1px solid var(--border);
+
+    background: rgba(
+        148,
+        163,
+        184,
+        0.08
+    );
+
+    color: var(--muted);
+
+    font-size: 12px;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.2s ease,
+        background 0.2s ease,
+        color 0.2s ease;
+
+}
+
+
+.filter-reset-btn:hover {
+
+    transform: translateY(-1px);
+
+    background: rgba(
+        148,
+        163,
+        184,
+        0.15
+    );
+
+    color: var(--text);
+
+}
+
+
+/* ============================================================
+   RESPONSIVE SECURITY EVENTS
+   ============================================================ */
+
+@media (max-width: 700px) {
+
+    .alert-header {
+
+        align-items: flex-start;
+
+        flex-direction: column;
+
+    }
+
+
+    .alert-filters {
+
+        align-items: stretch;
+
+        flex-direction: column;
+
+    }
+
+
+    .filter-group select {
+
+        width: 100%;
+
+    }
+
+
+    .filter-reset-btn {
+
+        width: 100%;
+
+    }
+
+}
+
+@media (max-width: 1000px) {
+
+    .header-controls {
+
+        align-items: flex-start;
+
+    }
+
+}
+
+
+@media (max-width: 600px) {
+
+    .control-buttons {
+
+        flex-wrap: wrap;
+
+    }
+
+}
+@media (max-width: 600px) {
+
+    .notification {
+
+        top: 80px;
+
+        left: 20px;
+        right: 20px;
+
+        min-width: auto;
+        max-width: none;
+
+    }
+
+}
