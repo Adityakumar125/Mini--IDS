@@ -1,8 +1,28 @@
+from pathlib import Path
+import sys
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+from data.ids_data import (
+    record_packet,
+    record_device,
+    get_monitoring_state
+)
+from src.alerts import generate_alert
+from src.detector import IntrusionDetector
 import sys
 import os
 import time
 
-from scapy.all import sniff, IP, IPv6, TCP, UDP
+from scapy.all import (
+    sniff,
+    IP,
+    IPv6,
+    TCP,
+    UDP
+)
 
 
 # ============================================================
@@ -10,24 +30,21 @@ from scapy.all import sniff, IP, IPv6, TCP, UDP
 # ============================================================
 
 BASE_DIR = os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__))
+    os.path.dirname(
+        os.path.abspath(__file__)
+    )
 )
 
 if BASE_DIR not in sys.path:
-    sys.path.insert(0, BASE_DIR)
+    sys.path.insert(
+        0,
+        BASE_DIR
+    )
 
 
 # ============================================================
 # IMPORTS
 # ============================================================
-
-from src.detector import IntrusionDetector
-from src.alerts import generate_alert
-
-from data.ids_data import (
-    record_packet,
-    get_monitoring_state
-)
 
 
 # ============================================================
@@ -43,116 +60,135 @@ detector = IntrusionDetector()
 
 def packet_callback(packet):
 
-    try:
+    # --------------------------------------------------------
+    # Check monitoring state
+    # --------------------------------------------------------
 
-        # ------------------------------------------------------
-        # CHECK MONITORING STATE
-        # ------------------------------------------------------
+    if not get_monitoring_state():
+        return
 
-        if not get_monitoring_state():
-            return
+    # --------------------------------------------------------
+    # Record packet
+    # --------------------------------------------------------
 
+    # --------------------------------------------------------
+    # Determine IP layer
+    # --------------------------------------------------------
 
-        # ------------------------------------------------------
-        # RECORD PACKET
-        # ------------------------------------------------------
+    src_ip = None
+    dst_ip = None
 
-        record_packet()
+    if IP in packet:
 
+        src_ip = packet[IP].src
+        dst_ip = packet[IP].dst
 
-        # ------------------------------------------------------
-        # DETERMINE IP VERSION
-        # ------------------------------------------------------
+    elif IPv6 in packet:
 
-        src_ip = None
-        dst_ip = None
+        src_ip = packet[IPv6].src
+        dst_ip = packet[IPv6].dst
 
-        if IP in packet:
+    else:
 
-            src_ip = packet[IP].src
-            dst_ip = packet[IP].dst
+        return
 
-        elif IPv6 in packet:
+    # --------------------------------------------------------
+# RECORD CONNECTED DEVICE
+# --------------------------------------------------------
 
-            src_ip = packet[IPv6].src
-            dst_ip = packet[IPv6].dst
+    record_device(src_ip)
 
-        else:
+    
+    # --------------------------------------------------------
+    # Protocol information
+    # --------------------------------------------------------
 
-            # Not an IP packet
-            return
+    protocol = "OTHER"
 
+    src_port = None
+    dst_port = None
 
-        # ------------------------------------------------------
-        # PROTOCOL / PORT
-        # ------------------------------------------------------
+    if TCP in packet:
 
-        protocol = "OTHER"
+        protocol = "TCP"
 
-        src_port = None
-        dst_port = None
+        src_port = packet[TCP].sport
+        dst_port = packet[TCP].dport
 
+    elif UDP in packet:
 
-        if TCP in packet:
+        protocol = "UDP"
 
-            protocol = "TCP"
+        src_port = packet[UDP].sport
+        dst_port = packet[UDP].dport
 
-            src_port = packet[TCP].sport
-            dst_port = packet[TCP].dport
+    # --------------------------------------------------------
+    # Packet information
+    # --------------------------------------------------------
 
+    packet_size = len(packet)
 
-        elif UDP in packet:
+    # --------------------------------------------------------
+    # RECORD PACKET DETAILS
+    # --------------------------------------------------------
 
-            protocol = "UDP"
+    record_packet(
+        protocol=protocol,
+        source_ip=src_ip,
+        destination_ip=dst_ip,
+        source_port=src_port,
+        destination_port=dst_port,
+        packet_size=packet_size
+    )
 
-            src_port = packet[UDP].sport
-            dst_port = packet[UDP].dport
+    print("\n" + "=" * 60)
+    print("📦 PACKET DETECTED")
+    print("=" * 60)
 
+    print(
+        f"Source IP       : {src_ip}"
+    )
 
-        # ------------------------------------------------------
-        # DISPLAY PACKET
-        # ------------------------------------------------------
+    print(
+        f"Destination IP  : {dst_ip}"
+    )
 
-        print("\n" + "=" * 60)
-        print("📦 PACKET DETECTED")
-        print("=" * 60)
+    print(
+        f"Protocol        : {protocol}"
+    )
 
-        print(f"Source IP       : {src_ip}")
-        print(f"Destination IP  : {dst_ip}")
-        print(f"Protocol        : {protocol}")
-        print(f"Source Port     : {src_port}")
-        print(f"Destination Port: {dst_port}")
-        print(f"Packet Size     : {len(packet)} bytes")
+    print(
+        f"Source Port     : {src_port}"
+    )
 
+    print(
+        f"Destination Port: {dst_port}"
+    )
 
-        # ------------------------------------------------------
-        # IDS ANALYSIS
-        # ------------------------------------------------------
+    print(
+        f"Packet Size     : {packet_size} bytes"
+    )
 
-        alert = detector.analyze_packet(
-            src_ip=src_ip,
-            dst_port=dst_port,
-            packet_size=len(packet)
-        )
+    # --------------------------------------------------------
+    # DETECTION
+    # --------------------------------------------------------
 
+    alert = detector.analyze_packet(
+        src_ip=src_ip,
+        dst_port=dst_port,
+        packet_size=packet_size
+    )
 
-        # ------------------------------------------------------
-        # ALERT
-        # ------------------------------------------------------
+    # --------------------------------------------------------
+    # ALERT
+    # --------------------------------------------------------
 
-        if alert:
+    if alert:
 
-            print("\n🚨 ALERT DETECTED")
-            print(alert)
+        print("🚨 ALERT DETECTED")
+        print(alert)
 
-            generate_alert(alert)
-
-
-    except Exception as error:
-
-        print(
-            f"⚠️ Packet processing error: {error}"
-        )
+        generate_alert(alert)
 
 
 # ============================================================
@@ -165,18 +201,26 @@ def start_monitoring():
     print("🛡️ MINI IDS - PACKET MONITOR")
     print("=" * 60)
 
-    print("Listening for network packets...")
-    print("Monitoring state is controlled by the dashboard.")
-    print("Press CTRL+C to stop.\n")
+    print(
+        "Listening for network packets..."
+    )
 
+    print(
+        "Monitoring state is controlled "
+        "by the dashboard."
+    )
+
+    print(
+        "Press CTRL+C to stop.\n"
+    )
 
     try:
 
         while True:
 
-            # --------------------------------------------------
-            # CHECK MONITORING STATE
-            # --------------------------------------------------
+            # ------------------------------------------------
+            # Check monitoring state
+            # ------------------------------------------------
 
             if not get_monitoring_state():
 
@@ -184,10 +228,9 @@ def start_monitoring():
 
                 continue
 
-
-            # --------------------------------------------------
-            # CAPTURE PACKETS
-            # --------------------------------------------------
+            # ------------------------------------------------
+            # Capture packets
+            # ------------------------------------------------
 
             sniff(
                 prn=packet_callback,
@@ -195,13 +238,11 @@ def start_monitoring():
                 timeout=1
             )
 
-
     except KeyboardInterrupt:
 
-        print("\n")
-        print("=" * 60)
-        print("🛑 MINI IDS PACKET MONITOR STOPPED")
-        print("=" * 60)
+        print(
+            "\n🛑 Packet monitor stopped."
+        )
 
 
 # ============================================================

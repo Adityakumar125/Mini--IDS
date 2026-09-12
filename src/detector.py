@@ -7,9 +7,9 @@ class IntrusionDetector:
 
     def __init__(self):
 
-        # ==================================================
+        # ============================================================
         # KNOWN / TRUSTED DEVICES
-        # ==================================================
+        # ============================================================
 
         self.known_devices = {
             "10.97.185.213",
@@ -19,9 +19,9 @@ class IntrusionDetector:
             "2409:40e5:117a:a27c::80",
         }
 
-        # ==================================================
+        # ============================================================
         # TRACKING
-        # ==================================================
+        # ============================================================
 
         self.connection_attempts = defaultdict(list)
         self.packet_times = defaultdict(list)
@@ -30,47 +30,52 @@ class IntrusionDetector:
         # Prevent duplicate alerts
         self.last_alert_time = {}
 
-        # ==================================================
+        # ============================================================
         # THRESHOLDS
-        # ==================================================
+        # ============================================================
 
+        # Port scan:
         # 10 different destination ports
         # within 10 seconds
+
         self.PORT_SCAN_THRESHOLD = 10
         self.PORT_SCAN_WINDOW = 10
 
+        # Packet flood:
         # 250 packets
         # within 10 seconds
+
         self.PACKET_FLOOD_THRESHOLD = 250
         self.PACKET_FLOOD_WINDOW = 10
 
-        # 5 failed login attempts
+        # Failed authentication:
+        # 5 attempts
         # within 60 seconds
+
         self.FAILED_LOGIN_THRESHOLD = 5
         self.FAILED_LOGIN_WINDOW = 60
 
-        # Large packet threshold
+        # Large packet
+
         self.LARGE_PACKET_THRESHOLD = 5000
 
-        # Alert cooldown
+        # Same alert cooldown
+
         self.ALERT_COOLDOWN = 30
 
         # Authentication-related ports
+
         self.AUTH_PORTS = {
             22,      # SSH
             3389,    # RDP
             5900,    # VNC
         }
 
-    # ======================================================
+    # ============================================================
     # IP CLASSIFICATION
-    # ======================================================
+    # ============================================================
 
     def is_local_ip(self, src_ip):
-        """
-        Determine whether an IP belongs to a local/private
-        network.
-        """
 
         if not src_ip:
             return False
@@ -81,27 +86,28 @@ class IntrusionDetector:
         except ValueError:
             return False
 
-        # Loopback
+        # Ignore loopback
+
         if ip.is_loopback:
             return False
 
-        # Multicast
+        # Ignore multicast
+
         if ip.is_multicast:
             return False
 
-        # IPv6 link-local
+        # Ignore IPv6 link-local
+
         if ip.version == 6 and ip.is_link_local:
             return False
 
         # Private/local address
-        if ip.is_private:
-            return True
 
-        return False
+        return ip.is_private
 
-    # ======================================================
+    # ============================================================
     # ALERT COOLDOWN
-    # ======================================================
+    # ============================================================
 
     def can_alert(self, alert_type, src_ip):
 
@@ -126,9 +132,9 @@ class IntrusionDetector:
 
         return True
 
-    # ======================================================
-    # UNKNOWN LOCAL DEVICE
-    # ======================================================
+    # ============================================================
+    # UNKNOWN DEVICE DETECTION
+    # ============================================================
 
     def check_unknown_device(self, src_ip):
 
@@ -136,10 +142,12 @@ class IntrusionDetector:
             return None
 
         # Trusted device
+
         if src_ip in self.known_devices:
             return None
 
-        # Only local/private devices
+        # Only inspect local/private devices
+
         if not self.is_local_ip(src_ip):
             return None
 
@@ -160,9 +168,9 @@ class IntrusionDetector:
                 f"Unknown local device detected: {src_ip}"
         }
 
-    # ======================================================
+    # ============================================================
     # FAILED LOGIN DETECTION
-    # ======================================================
+    # ============================================================
 
     def check_failed_login(self, src_ip):
 
@@ -176,6 +184,7 @@ class IntrusionDetector:
         )
 
         # Keep only recent attempts
+
         self.failed_logins[src_ip] = [
             timestamp
             for timestamp in self.failed_logins[src_ip]
@@ -215,16 +224,29 @@ class IntrusionDetector:
 
         return None
 
-    # ======================================================
+    # ============================================================
     # AUTHENTICATION ATTEMPT DETECTION
-    # ======================================================
+    # ============================================================
 
-    def check_auth_attempt(self, src_ip, dst_port):
+    def check_auth_attempt(
+        self,
+        src_ip,
+        dst_port
+    ):
 
         if not src_ip or not dst_port:
             return None
 
+        # Convert port safely
+
+        try:
+            dst_port = int(dst_port)
+
+        except (TypeError, ValueError):
+            return None
+
         # Only monitor authentication-related ports
+
         if dst_port not in self.AUTH_PORTS:
             return None
 
@@ -235,6 +257,7 @@ class IntrusionDetector:
         )
 
         # Keep only recent attempts
+
         self.failed_logins[src_ip] = [
             timestamp
             for timestamp in self.failed_logins[src_ip]
@@ -248,7 +271,10 @@ class IntrusionDetector:
             self.failed_logins[src_ip]
         )
 
-        if attempts >= self.FAILED_LOGIN_THRESHOLD:
+        if (
+            attempts
+            >= self.FAILED_LOGIN_THRESHOLD
+        ):
 
             if not self.can_alert(
                 "MULTIPLE_FAILED_LOGINS",
@@ -275,9 +301,9 @@ class IntrusionDetector:
 
         return None
 
-    # ======================================================
+    # ============================================================
     # PORT SCAN DETECTION
-    # ======================================================
+    # ============================================================
 
     def check_port_scan(
         self,
@@ -285,11 +311,18 @@ class IntrusionDetector:
         dst_port
     ):
 
-        if not src_ip or not dst_port:
+        if not src_ip or dst_port is None:
             return None
 
-        # Ignore public Internet sources
+        # Only monitor local/private sources
+
         if not self.is_local_ip(src_ip):
+            return None
+
+        try:
+            dst_port = int(dst_port)
+
+        except (TypeError, ValueError):
             return None
 
         current_time = time.time()
@@ -301,7 +334,8 @@ class IntrusionDetector:
             )
         )
 
-        # Keep last 10 seconds
+        # Keep only last 10 seconds
+
         self.connection_attempts[src_ip] = [
             attempt
             for attempt in self.connection_attempts[src_ip]
@@ -311,10 +345,11 @@ class IntrusionDetector:
             )
         ]
 
+        # Find unique destination ports
+
         unique_ports = {
             port
-            for _, port
-            in self.connection_attempts[src_ip]
+            for _, port in self.connection_attempts[src_ip]
         }
 
         if (
@@ -347,16 +382,17 @@ class IntrusionDetector:
 
         return None
 
-    # ======================================================
+    # ============================================================
     # PACKET FLOOD DETECTION
-    # ======================================================
+    # ============================================================
 
     def check_packet_flood(self, src_ip):
 
         if not src_ip:
             return None
 
-        # Ignore public Internet sources
+        # Only monitor local/private sources
+
         if not self.is_local_ip(src_ip):
             return None
 
@@ -366,7 +402,8 @@ class IntrusionDetector:
             current_time
         )
 
-        # Keep only packets from last 10 seconds
+        # Keep packets from last 10 seconds
+
         self.packet_times[src_ip] = [
             timestamp
             for timestamp in self.packet_times[src_ip]
@@ -410,9 +447,9 @@ class IntrusionDetector:
 
         return None
 
-    # ======================================================
+    # ============================================================
     # LARGE PACKET DETECTION
-    # ======================================================
+    # ============================================================
 
     def check_large_packet(
         self,
@@ -421,6 +458,12 @@ class IntrusionDetector:
     ):
 
         if not src_ip:
+            return None
+
+        try:
+            packet_size = int(packet_size)
+
+        except (TypeError, ValueError):
             return None
 
         if (
@@ -453,9 +496,9 @@ class IntrusionDetector:
                 )
         }
 
-    # ======================================================
+    # ============================================================
     # MAIN PACKET ANALYSIS
-    # ======================================================
+    # ============================================================
 
     def analyze_packet(
         self,
@@ -467,9 +510,9 @@ class IntrusionDetector:
         if not src_ip:
             return None
 
-        # ==================================================
+        # ========================================================
         # 1. UNKNOWN DEVICE
-        # ==================================================
+        # ========================================================
 
         alert = self.check_unknown_device(
             src_ip
@@ -478,9 +521,9 @@ class IntrusionDetector:
         if alert:
             return alert
 
-        # ==================================================
+        # ========================================================
         # 2. AUTHENTICATION ATTEMPTS
-        # ==================================================
+        # ========================================================
 
         alert = self.check_auth_attempt(
             src_ip,
@@ -490,9 +533,9 @@ class IntrusionDetector:
         if alert:
             return alert
 
-        # ==================================================
+        # ========================================================
         # 3. PORT SCAN
-        # ==================================================
+        # ========================================================
 
         alert = self.check_port_scan(
             src_ip,
@@ -502,9 +545,9 @@ class IntrusionDetector:
         if alert:
             return alert
 
-        # ==================================================
+        # ========================================================
         # 4. LARGE PACKET
-        # ==================================================
+        # ========================================================
 
         alert = self.check_large_packet(
             src_ip,
@@ -514,9 +557,9 @@ class IntrusionDetector:
         if alert:
             return alert
 
-        # ==================================================
+        # ========================================================
         # 5. PACKET FLOOD
-        # ==================================================
+        # ========================================================
 
         alert = self.check_packet_flood(
             src_ip
@@ -528,9 +571,9 @@ class IntrusionDetector:
         return None
 
 
-# ==========================================================
+# ================================================================
 # TEST
-# ==========================================================
+# ================================================================
 
 if __name__ == "__main__":
 
@@ -542,9 +585,9 @@ if __name__ == "__main__":
     print("IDS DETECTOR TEST")
     print("=" * 60)
 
-    # ------------------------------------------------------
+    # ------------------------------------------------------------
     # TEST 1
-    # ------------------------------------------------------
+    # ------------------------------------------------------------
 
     print("\n[TEST 1] Unknown device")
 
@@ -554,9 +597,9 @@ if __name__ == "__main__":
         )
     )
 
-    # ------------------------------------------------------
+    # ------------------------------------------------------------
     # TEST 2
-    # ------------------------------------------------------
+    # ------------------------------------------------------------
 
     print("\n[TEST 2] Port scan")
 
@@ -570,9 +613,9 @@ if __name__ == "__main__":
         if alert:
             print(alert)
 
-    # ------------------------------------------------------
+    # ------------------------------------------------------------
     # TEST 3
-    # ------------------------------------------------------
+    # ------------------------------------------------------------
 
     print("\n[TEST 3] Large packet")
 
@@ -583,24 +626,29 @@ if __name__ == "__main__":
         )
     )
 
-    # ------------------------------------------------------
+    # ------------------------------------------------------------
     # TEST 4
-    # ------------------------------------------------------
+    # ------------------------------------------------------------
 
     print("\n[TEST 4] Failed logins")
 
+    # Use a fresh detector because the previous
+    # tests may have populated state.
+
+    login_detector = IntrusionDetector()
+
     for attempt in range(5):
 
-        alert = detector.check_failed_login(
+        alert = login_detector.check_failed_login(
             test_ip
         )
 
         if alert:
             print(alert)
 
-    # ------------------------------------------------------
+    # ------------------------------------------------------------
     # TEST 5
-    # ------------------------------------------------------
+    # ------------------------------------------------------------
 
     print("\n[TEST 5] Public Internet filtering")
 

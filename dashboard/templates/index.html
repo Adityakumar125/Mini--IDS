@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -5,169 +6,594 @@
 
     <meta charset="UTF-8">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-    <title>Mini IDS Dashboard</title>
+    <meta
+        name="description"
+        content="Mini Network Intrusion Detection System Dashboard"
+    >
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>Mini IDS | Security Dashboard</title>
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- =====================================================
+         CSS
+    ====================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='css/style.css') }}"
+    >
+
+    <!-- =====================================================
+         CHART.JS
+         Load only ONCE
+    ====================================================== -->
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/chart.js"
+        defer
+    ></script>
 
 </head>
 
 
 <body>
-    <!-- ========================================= -->
-    <!-- NOTIFICATION -->
-    <!-- ========================================= -->
 
-    <div id="notification" class="notification" role="status">
-    </div>
+<!-- =========================================================
+     NOTIFICATION
+========================================================= -->
 
-    <main class="dashboard">
+<div
+    id="notification"
+    class="notification"
+    role="status"
+    aria-live="polite"
+></div>
 
 
-        <!-- ========================================= -->
-        <!-- HEADER -->
-        <!-- ========================================= -->
+<!-- =========================================================
+     MAIN DASHBOARD
+========================================================= -->
 
-        <header class="header">
+<main class="dashboard">
+
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <header class="dashboard-header">
+
+        <div class="brand">
+
+            <div class="brand-icon">
+                🛡️
+            </div>
 
             <div>
 
-                <h1>🛡️ Mini IDS Dashboard</h1>
+                <h1>
+                    Mini IDS
+                </h1>
 
                 <p>
-                    Real-time Network Intrusion Detection System
+                    Real-Time Network Intrusion Detection System
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div class="header-right">
+
+
+            <!-- SYSTEM SECURITY STATUS -->
+
+            <div
+                class="system-status secure"
+                id="system-status"
+            >
+
+                <span
+                    class="status-dot secure"
+                    id="status-dot"
+                ></span>
+
+                <span id="status-text">
+                    IDS MONITORING ACTIVE
+                </span>
+
+            </div>
+
+
+            <!-- LIVE MONITORING -->
+
+            <div class="monitor-status">
+
+                <span
+                    class="live-dot"
+                    id="live-dot"
+                ></span>
+
+                <span id="live-text">
+                    LIVE
+                </span>
+
+            </div>
+
+
+            <!-- CONTROL BUTTONS -->
+
+            <div class="control-buttons">
+
+                <button
+                    type="button"
+                    class="control-btn start-btn"
+                    id="start-monitoring-btn"
+                >
+                    ▶ Start Monitoring
+                </button>
+
+
+                <button
+                    type="button"
+                    class="control-btn stop-btn"
+                    id="stop-monitoring-btn"
+                    disabled
+                >
+                    ⏹ Stop Monitoring
+                </button>
+
+
+                <button
+                    type="button"
+                    class="control-btn clear-btn"
+                    id="clear-data-btn"
+                >
+                    🗑 Clear Data
+                </button>
+
+            </div>
+
+        </div>
+
+    </header>
+
+
+
+    <!-- =====================================================
+         SECURITY OVERVIEW
+    ====================================================== -->
+
+    <section class="security-overview panel">
+
+        <div class="section-heading">
+
+            <div>
+
+                <span class="section-kicker">
+                    SECURITY CENTER
+                </span>
+
+                <h2>
+                    🛡️ Security Overview
+                </h2>
+
+                <p>
+                    Current network security posture and threat summary
                 </p>
 
             </div>
 
 
-            <div class="header-controls">
+            <div
+                class="security-status-badge secure"
+                id="security-status-badge"
+            >
 
-                <div class="status secure" id="system-status">
+                <span
+                    class="security-status-dot secure"
+                    id="security-status-dot"
+                ></span>
 
-                    <span class="status-dot secure" id="status-dot"></span>
+                <span id="security-status">
+                    SECURE
+                </span>
 
-                    <span id="status-text">
-                        IDS MONITORING ACTIVE
+            </div>
+
+        </div>
+
+
+        <div class="security-overview-grid">
+
+
+            <!-- SECURITY SCORE -->
+
+            <div class="security-score-card">
+
+                <div class="score-label">
+                    SECURITY SCORE
+                </div>
+
+                <div class="score-circle">
+
+                    <span
+                        id="security-score"
+                    >
+                        0
                     </span>
 
-                </div>
-
-                <div class="monitor-status">
-                    <span id="live-dot" class="live-dot"></span>
-                    <span id="live-text">LIVE</span>
-                </div>
-
-                <div class="control-buttons">
-
-                    <button class="control-btn start-btn" id="start-monitoring-btn">
-                        ▶ Start
-                    </button>
-
-
-                    <button class="control-btn stop-btn" id="stop-monitoring-btn">
-                        ⏸ Stop
-                    </button>
-
-
-                    <button class="control-btn clear-btn" id="clear-data-btn">
-                        🗑 Clear Data
-                    </button>
+                    <small>
+                        /100
+                    </small>
 
                 </div>
 
-            </div>
-        </header>
-
-
-
-        <!-- ========================================= -->
-        <!-- SUMMARY CARDS -->
-        <!-- ========================================= -->
-
-        <section class="cards">
-
-
-            <div class="card">
-
-                <div class="card-title">
-                    📦 Packets Monitored
-                </div>
-
-                <div class="value" id="packets">
-                    {{ stats.packets }}
+                <div class="score-description">
+                    Overall network security condition
                 </div>
 
             </div>
 
 
 
-            <div class="card">
+            <!-- SECURITY METRICS -->
 
-                <div class="card-title">
-                    🚨 Total Alerts
+            <div class="security-metrics">
+
+
+                <div class="security-metric">
+
+                    <span class="metric-icon blue">
+                        📦
+                    </span>
+
+                    <div>
+
+                        <span>
+                            Packets
+                        </span>
+
+                        <strong id="security-packets">
+                            0
+                        </strong>
+
+                    </div>
+
                 </div>
 
-                <div class="value" id="alerts">
-                    {{ stats.alerts }}
+
+                <div class="security-metric">
+
+                    <span class="metric-icon red">
+                        🚨
+                    </span>
+
+                    <div>
+
+                        <span>
+                            Alerts
+                        </span>
+
+                        <strong id="security-alerts">
+                            0
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div class="security-metric">
+
+                    <span class="metric-icon high">
+                        🔴
+                    </span>
+
+                    <div>
+
+                        <span>
+                            High
+                        </span>
+
+                        <strong id="security-high">
+                            0
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div class="security-metric">
+
+                    <span class="metric-icon medium">
+                        🟡
+                    </span>
+
+                    <div>
+
+                        <span>
+                            Medium
+                        </span>
+
+                        <strong id="security-medium">
+                            0
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div class="security-metric">
+
+                    <span class="metric-icon low">
+                        🟢
+                    </span>
+
+                    <div>
+
+                        <span>
+                            Low
+                        </span>
+
+                        <strong id="security-low">
+                            0
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div class="security-metric">
+
+                    <span class="metric-icon purple">
+                        💻
+                    </span>
+
+                    <div>
+
+                        <span>
+                            Devices
+                        </span>
+
+                        <strong id="security-devices">
+                            0
+                        </strong>
+
+                    </div>
+
                 </div>
 
             </div>
 
 
 
-            <div class="card">
+            <!-- THREAT SUMMARY -->
 
-                <div class="card-title">
-                    🔴 High Severity
+            <div class="threat-summary">
+
+
+                <div class="threat-item">
+
+                    <span class="threat-label">
+                        TOP ATTACK
+                    </span>
+
+                    <strong id="security-top-attack">
+                        NONE
+                    </strong>
+
+                    <small id="security-top-attack-count">
+                        0 occurrences
+                    </small>
+
                 </div>
 
-                <div class="value high-value" id="high">
-                    {{ stats.high }}
+
+                <div class="threat-item">
+
+                    <span class="threat-label">
+                        LATEST THREAT
+                    </span>
+
+                    <strong id="security-latest-threat">
+                        No threats detected
+                    </strong>
+
+                    <small id="security-latest-time">
+                        —
+                    </small>
+
+                </div>
+
+
+                <div class="recommendation-box">
+
+                    <span class="threat-label">
+                        RECOMMENDATION
+                    </span>
+
+                    <p id="security-recommendation">
+                        Continue monitoring network activity.
+                    </p>
+
                 </div>
 
             </div>
 
+        </div>
+
+    </section>
 
 
-            <div class="card">
 
-                <div class="card-title">
-                    🟡 Medium Severity
-                </div>
+    <!-- =====================================================
+         SUMMARY CARDS
+    ====================================================== -->
 
-                <div class="value medium-value" id="medium">
-                    {{ stats.medium }}
-                </div>
+    <section class="summary-grid">
+
+
+        <article class="stat-card packets-card">
+
+            <div class="stat-icon">
+                📦
+            </div>
+
+            <div class="stat-content">
+
+                <span class="stat-label">
+                    PACKETS MONITORED
+                </span>
+
+                <strong
+                    class="stat-value"
+                    id="packets"
+                >
+                    {{ stats.packets|default(0) }}
+                </strong>
+
+                <span class="stat-description">
+                    Network packets inspected
+                </span>
 
             </div>
 
-        </section>
+        </article>
 
 
 
-        <!-- ========================================= -->
-        <!-- LIVE NETWORK TRAFFIC -->
-        <!-- ========================================= -->
+        <article class="stat-card alerts-card">
 
-        <section class="panel">
+            <div class="stat-icon">
+                🚨
+            </div>
+
+            <div class="stat-content">
+
+                <span class="stat-label">
+                    TOTAL ALERTS
+                </span>
+
+                <strong
+                    class="stat-value"
+                    id="alerts"
+                >
+                    {{ stats.alerts|default(0) }}
+                </strong>
+
+                <span class="stat-description">
+                    Security events detected
+                </span>
+
+            </div>
+
+        </article>
+
+
+
+        <article class="stat-card high-card">
+
+            <div class="stat-icon">
+                🔴
+            </div>
+
+            <div class="stat-content">
+
+                <span class="stat-label">
+                    HIGH SEVERITY
+                </span>
+
+                <strong
+                    class="stat-value high-value"
+                    id="high"
+                >
+                    {{ stats.high|default(0) }}
+                </strong>
+
+                <span class="stat-description">
+                    Critical security events
+                </span>
+
+            </div>
+
+        </article>
+
+
+
+        <article class="stat-card medium-card">
+
+            <div class="stat-icon">
+                🟡
+            </div>
+
+            <div class="stat-content">
+
+                <span class="stat-label">
+                    MEDIUM SEVERITY
+                </span>
+
+                <strong
+                    class="stat-value medium-value"
+                    id="medium"
+                >
+                    {{ stats.medium|default(0) }}
+                </strong>
+
+                <span class="stat-description">
+                    Suspicious activity
+                </span>
+
+            </div>
+
+        </article>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         LIVE TRAFFIC + ATTACK ANALYTICS
+    ====================================================== -->
+
+    <section class="two-column-grid">
+
+
+        <!-- LIVE TRAFFIC -->
+
+        <article class="panel chart-panel">
 
             <div class="panel-header">
 
                 <div>
+
+                    <span class="section-kicker">
+                        LIVE MONITORING
+                    </span>
 
                     <h2>
                         📈 Live Network Traffic
                     </h2>
 
                     <p>
-                        Packets monitored during live IDS operation
+                        Packets per second during active monitoring
                     </p>
+
+                </div>
+
+                <div class="panel-indicator">
+
+                    <span class="indicator-dot"></span>
+
+                    LIVE
 
                 </div>
 
@@ -178,30 +604,43 @@
 
                 <canvas id="trafficChart"></canvas>
 
+                <div
+                    class="chart-empty"
+                    id="trafficEmpty"
+                >
+                    Monitoring is currently stopped.
+                </div>
+
             </div>
 
-        </section>
+        </article>
 
 
 
-        <!-- ========================================= -->
         <!-- ATTACK ANALYTICS -->
-        <!-- ========================================= -->
 
-        <section class="panel">
+        <article class="panel chart-panel">
 
             <div class="panel-header">
 
                 <div>
+
+                    <span class="section-kicker">
+                        THREAT ANALYTICS
+                    </span>
 
                     <h2>
                         🎯 Attack Analytics
                     </h2>
 
                     <p>
-                        Distribution of detected security events
+                        Distribution of detected attack types
                     </p>
 
+                </div>
+
+                <div class="panel-indicator threat-indicator">
+                    THREATS
                 </div>
 
             </div>
@@ -211,164 +650,496 @@
 
                 <canvas id="attackChart"></canvas>
 
-                <div id="attackEmpty" class="chart-empty">
+                <div
+                    id="attackEmpty"
+                    class="chart-empty"
+                >
                     No attack data available yet.
                 </div>
 
             </div>
 
-        </section>
+        </article>
 
-        <!-- ========================================= -->
-        <!-- SECURITY EVENTS -->
-        <!-- ========================================= -->
+    </section>
 
-        <section class="panel alerts-panel">
 
-            <div class="panel-header alert-header">
 
-                <div>
+    <!-- =====================================================
+         PROTOCOL ANALYTICS
+    ====================================================== -->
 
-                    <h2>
-                        🚨 Security Events
-                    </h2>
+    <section class="panel protocol-panel">
 
-                    <p>
-                        Detected threats and suspicious network activity
-                    </p>
+        <div class="panel-header">
 
-                </div>
+            <div>
 
-                <div class="alert-count">
-                    <span id="visible-alert-count">0</span>
-                    events
+                <span class="section-kicker">
+                    NETWORK ANALYTICS
+                </span>
+
+                <h2>
+                    🌐 Protocol Analytics
+                </h2>
+
+                <p>
+                    Network traffic distribution by protocol
+                </p>
+
+            </div>
+
+
+            <div class="protocol-total-box">
+
+                <span>
+                    TOTAL PACKETS
+                </span>
+
+                <strong id="protocol-total">
+                    0
+                </strong>
+
+            </div>
+
+        </div>
+
+
+        <div class="protocol-layout">
+
+
+            <!-- PROTOCOL CHART -->
+
+            <div class="protocol-chart-wrapper">
+
+                <div class="chart-container protocol-container">
+
+                    <canvas id="protocolChart"></canvas>
+
+                    <div
+                        id="protocolEmpty"
+                        class="chart-empty"
+                    >
+                        No protocol traffic recorded yet.
+                    </div>
+
                 </div>
 
             </div>
 
 
-            <!-- ========================================= -->
-            <!-- ALERT FILTERS -->
-            <!-- ========================================= -->
+            <!-- PROTOCOL LIST -->
 
-            <div class="alert-filters">
+            <div
+                id="protocol-list"
+                class="protocol-list"
+            >
 
-                <div class="filter-group">
-
-                    <label for="severity-filter">
-                        Severity
-                    </label>
-
-                    <select id="severity-filter">
-
-                        <option value="ALL">
-                            All Severities
-                        </option>
-
-                        <option value="HIGH">
-                            🔴 High
-                        </option>
-
-                        <option value="MEDIUM">
-                            🟡 Medium
-                        </option>
-
-                        <option value="LOW">
-                            🟢 Low
-                        </option>
-
-                    </select>
-
+                <div class="protocol-empty">
+                    No protocol traffic recorded yet.
                 </div>
 
+            </div>
 
-                <div class="filter-group">
+        </div>
 
-                    <label for="type-filter">
-                        Attack Type
-                    </label>
-
-                    <select id="type-filter">
-
-                        <option value="ALL">
-                            All Attack Types
-                        </option>
-
-                    </select>
-
-                </div>
-
-                <div class="filter-group">
-
-                    <label for="ip-filter">
-                        SOURCE IP
-                    </label>
-
-                    <input type="text" id="ip-filter" class="alert-filter-input" placeholder="Search IP...">
-
-                </div>
+    </section>
 
 
-                <button id="reset-alert-filters" class="filter-reset-btn" type="button">
+
+    <!-- =====================================================
+         CONNECTED DEVICES
+    ====================================================== -->
+
+    <section class="panel devices-panel">
+
+        <div class="panel-header">
+
+            <div>
+
+                <span class="section-kicker">
+                    NETWORK DEVICES
+                </span>
+
+                <h2>
+                    💻 Connected Devices
+                </h2>
+
+                <p>
+                    Devices observed by the IDS
+                </p>
+
+            </div>
+
+
+            <div class="count-badge">
+
+                <strong id="device-count">
+                    0
+                </strong>
+
+                <span>
+                    devices
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <div class="table-wrapper">
+
+            <table class="data-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>
+                            IP ADDRESS
+                        </th>
+
+                        <th>
+                            TYPE
+                        </th>
+
+                        <th>
+                            FIRST SEEN
+                        </th>
+
+                        <th>
+                            LAST SEEN
+                        </th>
+
+                        <th>
+                            PACKETS
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody id="devices-body">
+
+                    <tr>
+
+                        <td
+                            colspan="5"
+                            class="empty"
+                        >
+                            No devices detected yet.
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         SECURITY EVENTS
+    ====================================================== -->
+
+    <section class="panel alerts-panel">
+
+        <div class="panel-header">
+
+            <div>
+
+                <span class="section-kicker">
+                    SECURITY LOG
+                </span>
+
+                <h2>
+                    🚨 Security Events
+                </h2>
+
+                <p>
+                    Detected threats and suspicious network activity
+                </p>
+
+            </div>
+
+
+            <div class="event-count">
+
+                <strong id="visible-alert-count">
+                    {{ stats.alerts|default(0) }}
+                </strong>
+
+                <span>
+                    visible events
+                </span>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             ALERT FILTERS
+        ================================================== -->
+
+        <div class="filters">
+
+
+            <div class="filter-group">
+
+                <label for="severity-filter">
+                    SEVERITY
+                </label>
+
+                <select id="severity-filter">
+
+                    <option value="ALL">
+                        All Severities
+                    </option>
+
+                    <option value="HIGH">
+                        High
+                    </option>
+
+                    <option value="MEDIUM">
+                        Medium
+                    </option>
+
+                    <option value="LOW">
+                        Low
+                    </option>
+
+                </select>
+
+            </div>
+
+
+
+            <div class="filter-group">
+
+                <label for="attack-filter">
+                    ATTACK TYPE
+                </label>
+
+                <select id="attack-filter">
+
+                    <option value="ALL">
+                        All Attack Types
+                    </option>
+
+                </select>
+
+            </div>
+
+
+
+            <div class="filter-group source-filter">
+
+                <label for="ip-filter">
+                    SOURCE IP
+                </label>
+
+                <input
+                    type="text"
+                    id="ip-filter"
+                    placeholder="Search source IP..."
+                    autocomplete="off"
+                >
+
+            </div>
+
+
+
+            <div class="filter-actions">
+
+                <button
+                    type="button"
+                    id="reset-alert-filters"
+                    class="reset-btn"
+                >
                     ↻ Reset Filters
                 </button>
 
             </div>
 
-
-            <!-- ========================================= -->
-            <!-- ALERT TABLE -->
-            <!-- ========================================= -->
-
-            <div class="table-wrapper">
-
-                <table>
-
-                    <thead>
-
-                        <tr>
-
-                            <th>Time</th>
-
-                            <th>Type</th>
-
-                            <th>Severity</th>
-
-                            <th>Source IP</th>
-
-                            <th>Message</th>
-
-                        </tr>
-
-                    </thead>
+        </div>
 
 
-                    <tbody id="alerts-body">
 
-                        <tr>
+        <!-- =================================================
+             ALERT TABLE
+        ================================================== -->
 
-                            <td colspan="5" class="empty">
-                                Loading security events...
-                            </td>
+        <div class="table-wrapper">
 
-                        </tr>
+            <table class="data-table alerts-table">
 
-                    </tbody>
+                <thead>
 
-                </table>
+                    <tr>
+
+                        <th>
+                            TIME
+                        </th>
+
+                        <th>
+                            TYPE
+                        </th>
+
+                        <th>
+                            SEVERITY
+                        </th>
+
+                        <th>
+                            SOURCE IP
+                        </th>
+
+                        <th>
+                            MESSAGE
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody id="alerts-body">
+
+                    {% for alert in stats.recent_alerts|default([]) %}
+
+                    <tr>
+
+                        <td>
+                            {{ alert.timestamp|default("-") }}
+                        </td>
+
+                        <td>
+                            {{ alert.type|default("-") }}
+                        </td>
+
+                        <td class="{{ alert.severity|default('')|lower }}">
+                            {{ alert.severity|default("-") }}
+                        </td>
+
+                        <td class="ip-cell">
+                            {{ alert.source_ip|default("-") }}
+                        </td>
+
+                        <td>
+                            {{ alert.message|default("-") }}
+                        </td>
+
+                    </tr>
+
+                    {% else %}
+
+                    <tr>
+
+                        <td
+                            colspan="5"
+                            class="empty"
+                        >
+                            No security alerts detected yet.
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         REPORT ACTION
+    ====================================================== -->
+
+    <section class="report-section">
+
+        <div class="report-card">
+
+            <div class="report-content">
+
+                <span class="report-icon">
+                    📄
+                </span>
+
+                <div>
+
+                    <h3>
+                        Security Report
+                    </h3>
+
+                    <p>
+                        Generate a downloadable PDF report containing
+                        the current IDS security analysis.
+                    </p>
+
+                </div>
 
             </div>
 
-        </section>
 
-    </main>
+            <button
+                type="button"
+                id="export-security-report-btn"
+                class="export-btn"
+            >
+                📥 Export Security Report
+            </button>
+
+        </div>
+
+    </section>
 
 
-    <!-- ========================================= -->
-    <!-- JAVASCRIPT -->
-    <!-- ========================================= -->
 
-    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    <!-- =====================================================
+         FOOTER
+    ====================================================== -->
+
+    <footer class="dashboard-footer">
+
+        <div>
+            🛡️ Mini IDS
+        </div>
+
+        <div>
+            Network Intrusion Detection System
+        </div>
+
+        <div>
+            Flask • Scapy • SQLite • Chart.js
+        </div>
+
+    </footer>
+
+
+</main>
+
+
+
+<!-- =========================================================
+     JAVASCRIPT
+========================================================= -->
+
+<script
+    src="{{ url_for('static', filename='js/dashboard.js') }}"
+    defer
+></script>
+
 
 </body>
 

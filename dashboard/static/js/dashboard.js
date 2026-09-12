@@ -1,177 +1,331 @@
 "use strict";
 
+/*
+============================================================
+🛡️ MINI IDS DASHBOARD
+Complete Dashboard JavaScript
+============================================================
+*/
 
-// ============================================================
-// MINI IDS DASHBOARD JAVASCRIPT
-// ============================================================
-
-
-// ============================================================
-// TRAFFIC DATA
-// ============================================================
-
-const trafficLabels = [];
-
-const packetData = [];
-
+const REFRESH_INTERVAL = 3000;
 const MAX_TRAFFIC_POINTS = 12;
+const NOTIFICATION_DURATION = 3500;
 
 
 // ============================================================
-// CHART REFERENCES
+// GLOBAL STATE
 // ============================================================
 
 let trafficChart = null;
-
 let attackChart = null;
+let protocolChart = null;
 
-let lastAlertId = null;
-let lastAlertSignature = null;
+let trafficLabels = [];
+let packetData = [];
 
-// ============================================================
-// ALERT NOTIFICATION TRACKING
-// ============================================================
-
+let currentAlerts = [];
 let knownAlertIds = new Set();
 
 let dashboardInitialized = false;
+let refreshTimer = null;
+let notificationTimer = null;
+
 
 // ============================================================
-// DOM ELEMENTS
+// DOM REFERENCES
 // ============================================================
 
-const packetsElement =
-    document.getElementById("packets");
+let packetsElement;
+let alertsElement;
+let highElement;
+let mediumElement;
 
-const alertsElement =
-    document.getElementById("alerts");
+let alertsBody;
 
-const highElement =
-    document.getElementById("high");
+let devicesBody;
+let deviceCountElement;
 
-const mediumElement =
-    document.getElementById("medium");
+let trafficCanvas;
 
-const alertsBody =
-    document.getElementById("alerts-body");
+let attackCanvas;
+let attackEmpty;
 
-const trafficCanvas =
-    document.getElementById("trafficChart");
+let protocolCanvas;
+let protocolEmpty;
+let protocolTotal;
+let protocolList;
 
-const attackCanvas =
-    document.getElementById("attackChart");
+let severityFilter;
+let typeFilter;
+let ipFilter;
 
-const attackEmpty =
-    document.getElementById("attackEmpty");
+let resetAlertFilters;
+let visibleAlertCount;
 
-const severityFilter =
-    document.getElementById("severity-filter");
+let notification;
 
-const typeFilter =
-    document.getElementById("type-filter");
-
-const resetAlertFilters =
-    document.getElementById("reset-alert-filters");
-
-const visibleAlertCount =
-    document.getElementById("visible-alert-count");
-
-let currentAlerts = [];
-
-const ipFilter =
-    document.getElementById("ip-filter");
+let startButton;
+let stopButton;
+let clearButton;
 
 
+// ============================================================
+// SECURITY OVERVIEW DOM REFERENCES
+// ============================================================
+
+let securityScore;
+let securityStatus;
+let securityStatusBadge;
+let securityStatusDot;
+
+let securityPackets;
+let securityAlerts;
+let securityHigh;
+let securityMedium;
+let securityLow;
+let securityDevices;
+
+let securityTopAttack;
+let securityTopAttackCount;
+
+let securityLatestThreat;
+let securityLatestTime;
+
+let securityRecommendation;
 
 
-function checkForNewAlert(stats) {
+// ============================================================
+// GET DOM ELEMENTS
+// ============================================================
 
-    const alerts =
-        Array.isArray(stats.recent_alerts)
-            ? stats.recent_alerts
-            : [];
+function initializeDOM() {
 
+    packetsElement =
+        document.getElementById("packets");
 
-    if (alerts.length === 0) {
+    alertsElement =
+        document.getElementById("alerts");
 
-        return;
+    highElement =
+        document.getElementById("high");
 
-    }
+    mediumElement =
+        document.getElementById("medium");
 
+    alertsBody =
+        document.getElementById("alerts-body");
 
-    const latestAlert =
-        alerts[0];
+    devicesBody =
+        document.getElementById("devices-body");
 
+    deviceCountElement =
+        document.getElementById("device-count");
 
-    const signature =
-        [
-            latestAlert.timestamp,
-            latestAlert.type,
-            latestAlert.source_ip,
-            latestAlert.message
-        ].join("|");
+    trafficCanvas =
+        document.getElementById("trafficChart");
 
+    attackCanvas =
+        document.getElementById("attackChart");
 
-    // --------------------------------------------------------
-    // First dashboard load
-    // --------------------------------------------------------
+    attackEmpty =
+        document.getElementById("attackEmpty");
 
-    if (lastAlertSignature === null) {
+    protocolCanvas =
+        document.getElementById("protocolChart");
 
-        lastAlertSignature =
-            signature;
+    protocolEmpty =
+        document.getElementById("protocolEmpty");
 
-        return;
+    protocolTotal =
+        document.getElementById("protocol-total");
 
-    }
+    protocolList =
+        document.getElementById("protocol-list");
 
+    severityFilter =
+        document.getElementById("severity-filter");
 
-    // --------------------------------------------------------
-    // No new alert
-    // --------------------------------------------------------
+    typeFilter =
+        document.getElementById("attack-filter");
 
-    if (
-        signature ===
-        lastAlertSignature
-    ) {
+    ipFilter =
+        document.getElementById("ip-filter");
 
-        return;
+    resetAlertFilters =
+        document.getElementById("reset-alert-filters");
 
-    }
+    visibleAlertCount =
+        document.getElementById("visible-alert-count");
 
+    notification =
+        document.getElementById("notification");
 
-    // --------------------------------------------------------
-    // NEW ALERT DETECTED
-    // --------------------------------------------------------
+    startButton =
+        document.getElementById("start-monitoring-btn");
 
-    lastAlertSignature =
-        signature;
+    stopButton =
+        document.getElementById("stop-monitoring-btn");
 
-
-    const severity =
-        String(
-            latestAlert.severity || ""
-        ).toUpperCase();
-
-
-    let notificationType =
-        "warning";
-
-
-    if (severity === "HIGH") {
-
-        notificationType =
-            "error";
-
-    }
+    clearButton =
+        document.getElementById("clear-data-btn");
 
 
-    showNotification(
-        `🚨 ${latestAlert.type}: ${latestAlert.message}`,
-        notificationType
-    );
+    // ========================================================
+    // SECURITY OVERVIEW
+    // ========================================================
+
+    securityScore =
+        document.getElementById("security-score");
+
+    securityStatus =
+        document.getElementById("security-status");
+
+    securityStatusBadge =
+        document.getElementById("security-status-badge");
+
+    securityStatusDot =
+        document.getElementById("security-status-dot");
+
+    securityPackets =
+        document.getElementById("security-packets");
+
+    securityAlerts =
+        document.getElementById("security-alerts");
+
+    securityHigh =
+        document.getElementById("security-high");
+
+    securityMedium =
+        document.getElementById("security-medium");
+
+    securityLow =
+        document.getElementById("security-low");
+
+    securityDevices =
+        document.getElementById("security-devices");
+
+    securityTopAttack =
+        document.getElementById("security-top-attack");
+
+    securityTopAttackCount =
+        document.getElementById("security-top-attack-count");
+
+    securityLatestThreat =
+        document.getElementById("security-latest-threat");
+
+    securityLatestTime =
+        document.getElementById("security-latest-time");
+
+    securityRecommendation =
+        document.getElementById("security-recommendation");
+
+
+    console.log("✅ DOM elements loaded.");
 
 }
+
+
+// ============================================================
+// HTML ESCAPE
+// ============================================================
+
+function escapeHTML(value) {
+
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+
+}
+
+
+// ============================================================
+// ALERT FINGERPRINT
+// ============================================================
+
+function createAlertFingerprint(alert) {
+
+    return [
+        alert.timestamp ?? "",
+        alert.type ?? "",
+        alert.severity ?? "",
+        alert.source_ip ?? "",
+        alert.message ?? ""
+    ].join("|");
+
+}
+
+
+// ============================================================
+// NOTIFICATION
+// ============================================================
+
+function showNotification(
+    message,
+    type = "success"
+) {
+
+    if (!notification) {
+
+        console.log("Notification:", message);
+
+        return;
+
+    }
+
+
+    notification.textContent =
+        message;
+
+
+    notification.className =
+        "notification show " + type;
+
+
+    notification.style.position =
+        "fixed";
+
+    notification.style.right =
+        "24px";
+
+    notification.style.bottom =
+        "24px";
+
+    notification.style.left =
+        "auto";
+
+    notification.style.top =
+        "auto";
+
+    notification.style.zIndex =
+        "99999";
+
+    notification.style.pointerEvents =
+        "none";
+
+
+    if (notificationTimer) {
+
+        clearTimeout(
+            notificationTimer
+        );
+
+    }
+
+
+    notificationTimer =
+        setTimeout(() => {
+
+            notification.classList.remove(
+                "show"
+            );
+
+        }, NOTIFICATION_DURATION);
+
+}
+
 
 // ============================================================
 // CREATE TRAFFIC CHART
@@ -182,10 +336,31 @@ function createTrafficChart() {
     if (!trafficCanvas) {
 
         console.error(
-            "trafficChart canvas not found"
+            "❌ trafficChart canvas not found."
         );
 
         return;
+
+    }
+
+
+    if (typeof Chart === "undefined") {
+
+        console.error(
+            "❌ Chart.js is not loaded."
+        );
+
+        return;
+
+    }
+
+
+    if (trafficChart) {
+
+        trafficChart.destroy();
+
+        trafficChart = null;
+
     }
 
 
@@ -193,106 +368,126 @@ function createTrafficChart() {
         trafficCanvas.getContext("2d");
 
 
-    trafficChart = new Chart(ctx, {
+    trafficChart =
+        new Chart(ctx, {
 
-        type: "line",
+            type: "line",
 
-        data: {
+            data: {
 
-            labels: trafficLabels,
+                labels: trafficLabels,
 
-            datasets: [
+                datasets: [
 
-                {
+                    {
 
-                    label: "Packets / Second",
-                    data: packetData,
+                        label: "Packets / Second",
 
-                    borderColor: "#22c55e",
+                        data: packetData,
 
-                    backgroundColor:
-                        "rgba(34, 197, 94, 0.16)",
+                        borderColor: "#22c55e",
 
-                    borderWidth: 2,
+                        backgroundColor:
+                            "rgba(34, 197, 94, 0.16)",
 
-                    pointRadius: 3,
+                        borderWidth: 2,
 
-                    pointHoverRadius: 5,
+                        pointRadius: 3,
 
-                    tension: 0.35,
+                        pointHoverRadius: 5,
 
-                    fill: true
+                        tension: 0.35,
 
-                }
+                        fill: true
 
-            ]
+                    }
 
-        },
-
-
-        options: {
-
-            responsive: true,
-
-            maintainAspectRatio: false,
-
-            animation: false,
-
-
-            interaction: {
-
-                mode: "index",
-
-                intersect: false
+                ]
 
             },
 
+            options: {
 
-            scales: {
+                responsive: true,
 
-                x: {
+                maintainAspectRatio: false,
 
-                    ticks: {
+                animation: false,
 
-                        color: "#94a3b8",
+                interaction: {
 
-                        maxTicksLimit: 8
+                    mode: "index",
+
+                    intersect: false
+
+                },
+
+                scales: {
+
+                    x: {
+
+                        ticks: {
+
+                            color: "#94a3b8",
+
+                            maxTicksLimit: 8
+
+                        },
+
+                        grid: {
+
+                            color:
+                                "rgba(148,163,184,0.08)"
+
+                        }
 
                     },
 
-                    grid: {
+                    y: {
 
-                        color:
-                            "rgba(148,163,184,0.08)"
+                        beginAtZero: true,
+
+                        title: {
+
+                            display: true,
+
+                            text:
+                                "Packets / Second",
+
+                            color:
+                                "#94a3b8"
+
+                        },
+
+                        ticks: {
+
+                            color:
+                                "#94a3b8"
+
+                        },
+
+                        grid: {
+
+                            color:
+                                "rgba(148,163,184,0.08)"
+
+                        }
 
                     }
 
                 },
 
+                plugins: {
 
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: "Packets / Second",
-                        color: "#94a3b8"
-                    },
-                    ticks: {
-                        color: "#94a3b8"
-                    }
-                }
-            },
+                    legend: {
 
+                        labels: {
 
-            plugins: {
+                            color: "#ffffff",
 
-                legend: {
+                            usePointStyle: true
 
-                    labels: {
-
-                        color: "#ffffff",
-
-                        usePointStyle: true
+                        }
 
                     }
 
@@ -300,9 +495,7 @@ function createTrafficChart() {
 
             }
 
-        }
-
-    });
+        });
 
 }
 
@@ -316,10 +509,27 @@ function createAttackChart() {
     if (!attackCanvas) {
 
         console.error(
-            "attackChart canvas not found"
+            "❌ attackChart canvas not found."
         );
 
         return;
+
+    }
+
+
+    if (typeof Chart === "undefined") {
+
+        return;
+
+    }
+
+
+    if (attackChart) {
+
+        attackChart.destroy();
+
+        attackChart = null;
+
     }
 
 
@@ -327,75 +537,72 @@ function createAttackChart() {
         attackCanvas.getContext("2d");
 
 
-    attackChart = new Chart(ctx, {
+    attackChart =
+        new Chart(ctx, {
 
-        type: "doughnut",
+            type: "doughnut",
 
-        data: {
+            data: {
 
-            labels: [],
+                labels: [],
 
-            datasets: [
+                datasets: [
 
-                {
+                    {
 
-                    label: "Alerts",
+                        label: "Alerts",
 
-                    data: [],
+                        data: [],
 
-                    backgroundColor: [
+                        backgroundColor: [
 
-                        "#ef4444",
+                            "#ef4444",
+                            "#f97316",
+                            "#f59e0b",
+                            "#a855f7",
+                            "#3b82f6",
+                            "#22c55e"
 
-                        "#f97316",
+                        ],
 
-                        "#f59e0b",
+                        borderColor:
+                            "#1e293b",
 
-                        "#a855f7",
+                        borderWidth: 3,
 
-                        "#3b82f6",
+                        hoverOffset: 6
 
-                        "#22c55e"
+                    }
 
-                    ],
+                ]
 
-                    borderColor: "#1e293b",
+            },
 
-                    borderWidth: 3,
+            options: {
 
-                    hoverOffset: 6
+                responsive: true,
 
-                }
+                maintainAspectRatio: false,
 
-            ]
+                animation: false,
 
-        },
+                cutout: "58%",
 
+                plugins: {
 
-        options: {
+                    legend: {
 
-            responsive: true,
+                        position: "top",
 
-            maintainAspectRatio: false,
+                        labels: {
 
-            animation: false,
+                            color: "#ffffff",
 
-            cutout: "58%",
+                            padding: 14,
 
+                            usePointStyle: true
 
-            plugins: {
-
-                legend: {
-
-                    position: "top",
-
-                    labels: {
-
-                        color: "#ffffff",
-
-                        padding: 14,
-
-                        usePointStyle: true
+                        }
 
                     }
 
@@ -403,7 +610,272 @@ function createAttackChart() {
 
             }
 
-        }
+        });
+
+}
+
+
+// ============================================================
+// CREATE PROTOCOL CHART
+// ============================================================
+
+function createProtocolChart() {
+
+    if (!protocolCanvas) {
+
+        console.error(
+            "❌ protocolChart canvas not found."
+        );
+
+        return;
+
+    }
+
+
+    if (typeof Chart === "undefined") {
+
+        return;
+
+    }
+
+
+    if (protocolChart) {
+
+        protocolChart.destroy();
+
+        protocolChart = null;
+
+    }
+
+
+    const ctx =
+        protocolCanvas.getContext("2d");
+
+
+    protocolChart =
+        new Chart(ctx, {
+
+            type: "doughnut",
+
+            data: {
+
+                labels: [],
+
+                datasets: [
+
+                    {
+
+                        label: "Packets",
+
+                        data: [],
+
+                        backgroundColor: [
+
+                            "#38bdf8",
+                            "#22c55e",
+                            "#f59e0b",
+                            "#a855f7",
+                            "#ef4444",
+                            "#64748b"
+
+                        ],
+
+                        borderColor:
+                            "#1e293b",
+
+                        borderWidth: 3,
+
+                        hoverOffset: 6
+
+                    }
+
+                ]
+
+            },
+
+            options: {
+
+                responsive: true,
+
+                maintainAspectRatio: false,
+
+                animation: false,
+
+                cutout: "58%",
+
+                plugins: {
+
+                    legend: {
+
+                        position: "bottom",
+
+                        labels: {
+
+                            color: "#ffffff",
+
+                            padding: 14,
+
+                            usePointStyle: true
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+        });
+
+}
+
+
+// ============================================================
+// UPDATE PROTOCOL ANALYTICS
+// ============================================================
+
+function updateProtocolAnalytics(data) {
+
+    if (!protocolChart) {
+
+        return;
+
+    }
+
+
+    const source =
+        data?.data ?? data ?? {};
+
+
+    const protocolData =
+        Array.isArray(source.protocols)
+            ? source.protocols
+            : [];
+
+
+    const total =
+        Number(
+            source.total_packets ?? 0
+        ) || 0;
+
+
+    if (protocolTotal) {
+
+        protocolTotal.textContent =
+            total.toLocaleString();
+
+    }
+
+
+    const labels =
+        protocolData.map(
+            item =>
+                String(
+                    item.protocol ?? "OTHER"
+                ).toUpperCase()
+        );
+
+
+    const values =
+        protocolData.map(
+            item =>
+                Number(
+                    item.packets ?? 0
+                ) || 0
+        );
+
+
+    protocolChart.data.labels =
+        labels;
+
+    protocolChart.data.datasets[0].data =
+        values;
+
+
+    protocolChart.update("none");
+
+
+    if (protocolEmpty) {
+
+        protocolEmpty.style.display =
+            protocolData.length === 0
+                ? "flex"
+                : "none";
+
+    }
+
+
+    if (!protocolList) {
+
+        return;
+
+    }
+
+
+    protocolList.innerHTML = "";
+
+
+    if (protocolData.length === 0) {
+
+        protocolList.innerHTML = `
+
+            <div class="protocol-empty">
+                No protocol traffic recorded yet.
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+
+    protocolData.forEach(item => {
+
+        const row =
+            document.createElement("div");
+
+
+        row.className =
+            "protocol-item";
+
+
+        const protocol =
+            escapeHTML(
+                item.protocol ?? "OTHER"
+            );
+
+
+        const packets =
+            Number(
+                item.packets ?? 0
+            ) || 0;
+
+
+        const percentage =
+            Number(
+                item.percentage ?? 0
+            ) || 0;
+
+
+        row.innerHTML = `
+
+            <div class="protocol-name">
+                ${protocol}
+            </div>
+
+            <div class="protocol-packets">
+                ${packets.toLocaleString()} packets
+            </div>
+
+            <div class="protocol-percentage">
+                ${percentage.toFixed(2)}%
+            </div>
+
+        `;
+
+
+        protocolList.appendChild(row);
 
     });
 
@@ -459,41 +931,78 @@ function updateSummaryCards(stats) {
 
 
 // ============================================================
+// CLEAR TRAFFIC CHART
+// ============================================================
+
+function clearTrafficChart() {
+
+    trafficLabels.length = 0;
+
+    packetData.length = 0;
+
+
+    if (!trafficChart) {
+
+        return;
+
+    }
+
+
+    trafficChart.data.labels =
+        trafficLabels;
+
+    trafficChart.data.datasets[0].data =
+        packetData;
+
+
+    trafficChart.update("none");
+
+}
+
+
+// ============================================================
 // UPDATE TRAFFIC CHART
 // ============================================================
 
 function updateTrafficChart(stats) {
 
     if (!trafficChart) {
+
         return;
+
     }
 
 
-    // --------------------------------------------------------
-    // Do not add traffic points when monitoring is stopped
-    // --------------------------------------------------------
+    if (
+        stats.monitoring_active !== true
+    ) {
 
-    if (stats.monitoring_active !== true) {
         return;
+
     }
-
-
-    const now =
-        new Date().toLocaleTimeString();
 
 
     const packetRate =
-        Number(stats.packet_rate) || 0;
+        Number(
+            stats.packet_rate ?? 0
+        ) || 0;
+
+
+    const now =
+        new Date().toLocaleTimeString(
+            [],
+            {
+                hour: "numeric",
+                minute: "2-digit",
+                second: "2-digit"
+            }
+        );
 
 
     trafficLabels.push(now);
 
     packetData.push(packetRate);
 
-
-    // --------------------------------------------------------
-    // Keep only latest points
-    // --------------------------------------------------------
 
     while (
         trafficLabels.length >
@@ -520,7 +1029,7 @@ function updateTrafficChart(stats) {
 
 
 // ============================================================
-// UPDATE ATTACK ANALYTICS
+// UPDATE ATTACK CHART
 // ============================================================
 
 function updateAttackChart(stats) {
@@ -533,7 +1042,10 @@ function updateAttackChart(stats) {
 
 
     const attackTypes =
-        stats.alert_types || {};
+        stats.alert_types &&
+        typeof stats.alert_types === "object"
+            ? stats.alert_types
+            : {};
 
 
     const labels =
@@ -551,7 +1063,6 @@ function updateAttackChart(stats) {
     attackChart.data.labels =
         labels;
 
-
     attackChart.data.datasets[0].data =
         values;
 
@@ -561,17 +1072,10 @@ function updateAttackChart(stats) {
 
     if (attackEmpty) {
 
-        if (labels.length === 0) {
-
-            attackEmpty.style.display =
-                "flex";
-
-        } else {
-
-            attackEmpty.style.display =
-                "none";
-
-        }
+        attackEmpty.style.display =
+            labels.length === 0
+                ? "flex"
+                : "none";
 
     }
 
@@ -585,50 +1089,109 @@ function updateAttackChart(stats) {
 function updateAttackTypeFilter(stats) {
 
     if (!typeFilter) {
+
         return;
+
     }
 
-    const attackTypes =
-        stats.alert_types || {};
+
+    const backendTypes =
+        stats?.alert_types &&
+        typeof stats.alert_types === "object"
+            ? Object.keys(
+                stats.alert_types
+            )
+            : [];
+
+
+    const alertTypes =
+        Array.isArray(
+            stats?.recent_alerts
+        )
+            ? stats.recent_alerts
+                .map(alert =>
+                    String(
+                        alert.type ?? ""
+                    )
+                        .trim()
+                        .toUpperCase()
+                )
+                .filter(Boolean)
+            : [];
+
+
+    const availableTypes =
+        [
+            ...new Set([
+                ...backendTypes,
+                ...alertTypes
+            ])
+        ]
+            .filter(Boolean)
+            .sort();
+
 
     const currentValue =
-        typeFilter.value;
-
-    // Keep "All Attack Types"
-    typeFilter.innerHTML = `
-        <option value="ALL">
-            All Attack Types
-        </option>
-    `;
-
-    Object.keys(attackTypes)
-        .sort()
-        .forEach(type => {
-
-            const option =
-                document.createElement("option");
-
-            option.value = type;
-
-            option.textContent =
-                type.replaceAll("_", " ");
-
-            typeFilter.appendChild(option);
-
-        });
+        typeFilter.value || "ALL";
 
 
-    // Restore previous selection if it still exists
+    typeFilter.innerHTML = "";
+
+
+    const allOption =
+        document.createElement("option");
+
+
+    allOption.value =
+        "ALL";
+
+
+    allOption.textContent =
+        "All Attack Types";
+
+
+    typeFilter.appendChild(
+        allOption
+    );
+
+
+    availableTypes.forEach(type => {
+
+        const option =
+            document.createElement("option");
+
+
+        option.value =
+            type;
+
+
+        option.textContent =
+            type.replaceAll(
+                "_",
+                " "
+            );
+
+
+        typeFilter.appendChild(
+            option
+        );
+
+    });
+
 
     if (
         currentValue !== "ALL" &&
-        attackTypes[currentValue] !== undefined
+        availableTypes.includes(
+            currentValue
+        )
     ) {
 
         typeFilter.value =
             currentValue;
 
-    } else {
+    }
+
+    else {
 
         typeFilter.value =
             "ALL";
@@ -648,50 +1211,30 @@ function getFilteredAlerts() {
         [...currentAlerts];
 
 
-    // --------------------------------------------------------
-    // SEVERITY FILTER
-    // --------------------------------------------------------
-
     const severity =
         severityFilter
             ? severityFilter.value
             : "ALL";
 
 
-    if (severity !== "ALL") {
+    if (
+        severity &&
+        severity !== "ALL"
+    ) {
 
         filtered =
-            filtered.filter(alert =>
-                String(
+            filtered.filter(alert => {
+
+                return String(
                     alert.severity ?? ""
-                ).toUpperCase()
-                === severity
-            );
-
-    }
-
-    const ip =
-        ipFilter
-            ? ipFilter.value.trim().toLowerCase()
-            : "";
-
-    if (ip !== "") {
-
-        filtered =
-            filtered.filter(alert =>
-                String(
-                    alert.source_ip ?? ""
                 )
-                    .toLowerCase()
-                    .includes(ip)
-            );
+                    .toUpperCase() ===
+                    severity;
+
+            });
 
     }
 
-
-    // --------------------------------------------------------
-    // ATTACK TYPE FILTER
-    // --------------------------------------------------------
 
     const type =
         typeFilter
@@ -699,15 +1242,45 @@ function getFilteredAlerts() {
             : "ALL";
 
 
-    if (type !== "ALL") {
+    if (
+        type &&
+        type !== "ALL"
+    ) {
 
         filtered =
-            filtered.filter(alert =>
-                String(
+            filtered.filter(alert => {
+
+                return String(
                     alert.type ?? ""
-                ).toUpperCase()
-                === type
-            );
+                )
+                    .toUpperCase() ===
+                    type;
+
+            });
+
+    }
+
+
+    const ip =
+        ipFilter
+            ? ipFilter.value
+                .trim()
+                .toLowerCase()
+            : "";
+
+
+    if (ip !== "") {
+
+        filtered =
+            filtered.filter(alert => {
+
+                return String(
+                    alert.source_ip ?? ""
+                )
+                    .toLowerCase()
+                    .includes(ip);
+
+            });
 
     }
 
@@ -724,17 +1297,15 @@ function getFilteredAlerts() {
 function renderAlertTable() {
 
     if (!alertsBody) {
+
         return;
+
     }
 
 
     const alerts =
         getFilteredAlerts();
 
-
-    // --------------------------------------------------------
-    // UPDATE VISIBLE COUNT
-    // --------------------------------------------------------
 
     if (visibleAlertCount) {
 
@@ -747,10 +1318,6 @@ function renderAlertTable() {
     alertsBody.innerHTML = "";
 
 
-    // --------------------------------------------------------
-    // NO ALERTS
-    // --------------------------------------------------------
-
     if (alerts.length === 0) {
 
         const row =
@@ -759,11 +1326,11 @@ function renderAlertTable() {
 
         row.innerHTML = `
 
-            <td
-                colspan="5"
-                class="empty"
-            >
-                No security alerts match the selected filters.
+            <td colspan="5" class="empty">
+
+                No security alerts match
+                the selected filters.
+
             </td>
 
         `;
@@ -776,10 +1343,6 @@ function renderAlertTable() {
     }
 
 
-    // --------------------------------------------------------
-    // CREATE ALERT ROWS
-    // --------------------------------------------------------
-
     alerts.forEach(alert => {
 
         const row =
@@ -789,39 +1352,59 @@ function renderAlertTable() {
         const severity =
             String(
                 alert.severity ?? ""
-            ).toLowerCase();
+            )
+                .toLowerCase();
+
+
+        if (severity === "high") {
+
+            row.classList.add(
+                "alert-high-row"
+            );
+
+        }
+
+        else if (
+            severity === "medium"
+        ) {
+
+            row.classList.add(
+                "alert-medium-row"
+            );
+
+        }
 
 
         row.innerHTML = `
 
             <td>
                 ${escapeHTML(
-            alert.timestamp ?? "-"
-        )}
+                    alert.timestamp ?? "-"
+                )}
             </td>
 
             <td>
                 ${escapeHTML(
-            alert.type ?? "-"
-        )}
+                    alert.type ?? "-"
+                )}
             </td>
 
-            <td class="${severity}">
+            <td class="${escapeHTML(severity)}">
                 ${escapeHTML(
-            alert.severity ?? "-"
-        )}
+                    alert.severity ?? "-"
+                )}
             </td>
 
             <td class="ip-cell">
                 ${escapeHTML(
-            alert.source_ip ?? "-"
-        )}
+                    alert.source_ip ?? "-"
+                )}
             </td>
 
             <td>
                 ${escapeHTML(
-            alert.message ?? "-"
-        )}
+                    alert.message ?? "-"
+                )}
             </td>
 
         `;
@@ -860,139 +1443,172 @@ function updateAlertTable(stats) {
 function detectNewAlerts(stats) {
 
     const alerts =
-        Array.isArray(stats.recent_alerts)
+        Array.isArray(
+            stats.recent_alerts
+        )
             ? stats.recent_alerts
             : [];
 
+
     if (alerts.length === 0) {
+
         return;
+
     }
+
+
+    const newAlerts = [];
+
 
     alerts.forEach(alert => {
 
-        /*
-         * The backend currently does not send
-         * the database alert ID.
-         *
-         * Therefore create a unique fingerprint
-         * using the alert contents.
-         */
-
-        const alertId = [
-            alert.timestamp,
-            alert.type,
-            alert.severity,
-            alert.source_ip,
-            alert.message
-        ].join("|");
+        const fingerprint =
+            createAlertFingerprint(
+                alert
+            );
 
 
-        // Already processed
-        if (knownAlertIds.has(alertId)) {
+        if (
+            knownAlertIds.has(
+                fingerprint
+            )
+        ) {
+
             return;
+
         }
 
 
-        // Remember alert
-        knownAlertIds.add(alertId);
+        knownAlertIds.add(
+            fingerprint
+        );
 
 
-        /*
-         * Do not show notifications for every alert
-         * already present when the page first loads.
-         */
-
-        if (!dashboardInitialized) {
-            return;
-        }
-
-
-        const severity =
-            String(
-                alert.severity ?? ""
-            ).toUpperCase();
-
-
-        let notificationType = "warning";
-
-        if (severity === "HIGH") {
-            notificationType = "critical";
-        }
-
-
-        showNotification(
-            `🚨 ${severity} — ${alert.message}`,
-            notificationType
+        newAlerts.push(
+            alert
         );
 
     });
 
-}
 
-// ============================================================
-// HTML ESCAPE
-// ============================================================
+    if (!dashboardInitialized) {
 
-function escapeHTML(value) {
-
-    return String(value)
-
-        .replaceAll(
-            "&",
-            "&amp;"
-        )
-
-        .replaceAll(
-            "<",
-            "&lt;"
-        )
-
-        .replaceAll(
-            ">",
-            "&gt;"
-        )
-
-        .replaceAll(
-            '"',
-            "&quot;"
-        )
-
-        .replaceAll(
-            "'",
-            "&#039;"
-        );
-
-}
-
-function showNotification(message, type = "success") {
-
-    const notification =
-        document.getElementById("notification");
-
-    if (!notification) {
-        console.log(message);
         return;
+
     }
 
-    notification.textContent = message;
 
-    notification.className =
-        `notification show ${type}`;
+    if (newAlerts.length === 0) {
 
-    clearTimeout(window.notificationTimeout);
+        return;
 
-    window.notificationTimeout =
-        setTimeout(() => {
+    }
 
-            notification.classList.remove("show");
 
-        }, 3000);
+    const latestAlert =
+        newAlerts[0];
+
+
+    const severity =
+        String(
+            latestAlert.severity ?? ""
+        )
+            .toUpperCase();
+
+
+    let notificationType =
+        "warning";
+
+
+    if (severity === "HIGH") {
+
+        notificationType =
+            "critical";
+
+    }
+
+
+    showNotification(
+        `🚨 ${severity} — ${latestAlert.message}`,
+        notificationType
+    );
 
 }
 
-// =========================================
-// UPDATE SYSTEM THREAT STATUS
-// =========================================
+
+// ============================================================
+// SECURITY STATE
+// ============================================================
+
+function getSecurityState(stats = {}) {
+
+    const high =
+        Number(stats.high ?? stats.high_alerts ?? 0);
+
+    const medium =
+        Number(stats.medium ?? stats.medium_alerts ?? 0);
+
+    const monitoringActive =
+        stats.monitoring_active === true;
+
+
+    // --------------------------------------------------------
+    // Monitoring stopped
+    // --------------------------------------------------------
+
+    if (!monitoringActive) {
+
+        return {
+            level: "stopped",
+            text: "IDS MONITORING STOPPED"
+        };
+
+    }
+
+
+    // --------------------------------------------------------
+    // High severity threats
+    // --------------------------------------------------------
+
+    if (high > 0) {
+
+        return {
+            level: "critical",
+            text: "CRITICAL — THREATS DETECTED"
+        };
+
+    }
+
+
+    // --------------------------------------------------------
+    // Medium severity threats
+    // --------------------------------------------------------
+
+    if (medium > 0) {
+
+        return {
+            level: "warning",
+            text: "WARNING — SUSPICIOUS ACTIVITY"
+        };
+
+    }
+
+
+    // --------------------------------------------------------
+    // No threats
+    // --------------------------------------------------------
+
+    return {
+        level: "secure",
+        text: "IDS MONITORING ACTIVE"
+    };
+
+}
+
+
+// ============================================================
+// UPDATE SYSTEM STATUS
+// ============================================================
 
 function updateSystemStatus(stats) {
 
@@ -1005,10 +1621,29 @@ function updateSystemStatus(stats) {
     const statusText =
         document.getElementById("status-text");
 
-    if (!status || !statusDot || !statusText) {
+
+    if (
+        !status ||
+        !statusDot ||
+        !statusText
+    ) {
+
+        console.warn(
+            "⚠️ System status elements not found."
+        );
+
         return;
+
     }
 
+
+    const state =
+        getSecurityState(stats);
+
+
+    // --------------------------------------------------------
+    // Remove previous states
+    // --------------------------------------------------------
 
     status.classList.remove(
         "secure",
@@ -1025,72 +1660,48 @@ function updateSystemStatus(stats) {
     );
 
 
-    // IDS STOPPED
-    if (stats.monitoring_active === false) {
+    // --------------------------------------------------------
+    // Apply current state
+    // --------------------------------------------------------
 
-        status.classList.add("stopped");
-        statusDot.classList.add("stopped");
+    status.classList.add(
+        state.level
+    );
 
-        statusText.textContent =
-            "IDS MONITORING STOPPED";
+    statusDot.classList.add(
+        state.level
+    );
 
-        return;
-
-    }
-
-
-    // CRITICAL THREAT
-    if (Number(stats.high) > 0) {
-
-        status.classList.add("critical");
-        statusDot.classList.add("critical");
-
-        statusText.textContent =
-            "CRITICAL — THREATS DETECTED";
-
-        return;
-
-    }
-
-
-    // WARNING
-    if (Number(stats.medium) > 0) {
-
-        status.classList.add("warning");
-        statusDot.classList.add("warning");
-
-        statusText.textContent =
-            "WARNING — SUSPICIOUS ACTIVITY";
-
-        return;
-
-    }
-
-
-    // SECURE
-    status.classList.add("secure");
-    statusDot.classList.add("secure");
 
     statusText.textContent =
-        "IDS MONITORING ACTIVE";
+        state.text;
 
-}
+
+    console.log(
+        "🛡️ System security state:",
+        state
+    );
+
+} 
+
+
+// ============================================================
+// UPDATE CONTROL BUTTONS
+// ============================================================
+
 function updateControlButtons(stats) {
-
-    const startButton =
-        document.getElementById(
-            "start-monitoring-btn"
-        );
-
-    const stopButton =
-        document.getElementById(
-            "stop-monitoring-btn"
-        );
 
     const liveStatus =
         document.querySelector(
             ".monitor-status"
         );
+
+
+    const liveDot =
+        document.getElementById(
+            "live-dot"
+        );
+
 
     const liveText =
         document.getElementById(
@@ -1098,7 +1709,10 @@ function updateControlButtons(stats) {
         );
 
 
-    if (!startButton || !stopButton) {
+    if (
+        !startButton ||
+        !stopButton
+    ) {
 
         return;
 
@@ -1109,64 +1723,70 @@ function updateControlButtons(stats) {
         stats.monitoring_active === true;
 
 
-    // ========================================================
-    // BUTTON STATE
-    // ========================================================
-
     startButton.disabled =
         isMonitoring;
+
 
     stopButton.disabled =
         !isMonitoring;
 
 
-    // ========================================================
-    // LIVE INDICATOR
-    // ========================================================
+    if (
+        liveStatus &&
+        liveText
+    ) {
 
-    if (liveStatus && liveText) {
+        liveStatus.classList.toggle(
+            "stopped",
+            !isMonitoring
+        );
 
-        if (isMonitoring) {
 
-            liveStatus.classList.remove(
-                "stopped"
-            );
+        liveText.textContent =
+            isMonitoring
+                ? "LIVE"
+                : "STOPPED";
 
-            liveText.textContent =
-                "LIVE";
+    }
 
-        }
 
-        else {
+    if (liveDot) {
 
-            liveStatus.classList.add(
-                "stopped"
-            );
-
-            liveText.textContent =
-                "STOPPED";
-
-        }
+        liveDot.classList.toggle(
+            "stopped",
+            !isMonitoring
+        );
 
     }
 
 }
 
+
 // ============================================================
-// FETCH DASHBOARD DATA
+// UPDATE CONNECTED DEVICES
 // ============================================================
 
-async function updateDashboard() {
+async function updateConnectedDevices() {
+
+    if (!devicesBody) {
+
+        return;
+
+    }
+
 
     try {
 
         const response =
             await fetch(
-                "/api/stats",
+                "/api/devices",
                 {
                     method: "GET",
-
-                    cache: "no-store"
+                    cache: "no-store",
+                    headers: {
+                        "Accept":
+                            "application/json"
+                    }
                 }
             );
 
@@ -1180,47 +1800,129 @@ async function updateDashboard() {
         }
 
 
-        const stats =
+        const result =
             await response.json();
 
-        updateSystemStatus(stats);
 
-        updateControlButtons(stats);
-
-        updateSummaryCards(stats);
-
-        checkForNewAlert(stats);
-
-        // Update traffic
-        updateTrafficChart(stats);
+        const devices =
+            Array.isArray(
+                result.devices
+            )
+                ? result.devices
+                : [];
 
 
-        // Update attacks
-        updateAttackChart(stats);
+        if (deviceCountElement) {
 
-        // Update attack type filter
-        updateAttackTypeFilter(stats);
+            deviceCountElement.textContent =
+                devices.length;
 
-
-        // Update alerts
-        updateAlertTable(stats);
-
-        // Detect newly generated security alerts
-        detectNewAlerts(stats);
+        }
 
 
-        console.log(
-            "IDS dashboard updated:",
-            stats
-        );
+        if (devices.length === 0) {
+
+            devicesBody.innerHTML = `
+
+                <tr>
+
+                    <td colspan="5" class="empty">
+                        No devices detected yet.
+                    </td>
+
+                </tr>
+
+            `;
+
+            return;
+
+        }
+
+
+        devicesBody.innerHTML = "";
+
+
+        devices.forEach(device => {
+
+            const row =
+                document.createElement("tr");
+
+
+            const deviceType =
+                String(
+                    device.device_type ??
+                    "UNKNOWN"
+                ).toUpperCase();
+
+
+            if (
+                deviceType === "LOCAL"
+            ) {
+
+                row.classList.add(
+                    "device-local"
+                );
+
+            }
+
+            else if (
+                deviceType === "EXTERNAL"
+            ) {
+
+                row.classList.add(
+                    "device-external"
+                );
+
+            }
+
+
+            row.innerHTML = `
+
+                <td class="ip-cell">
+                    ${escapeHTML(
+                        device.ip_address ?? "-"
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHTML(
+                        deviceType
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHTML(
+                        device.first_seen ?? "-"
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHTML(
+                        device.last_seen ?? "-"
+                    )}
+                </td>
+
+                <td>
+                    ${Number(
+                        device.packet_count ?? 0
+                    ).toLocaleString()}
+                </td>
+
+            `;
+
+
+            devicesBody.appendChild(
+                row
+            );
+
+        });
 
     }
-
 
     catch (error) {
 
         console.error(
-            "Failed to update IDS dashboard:",
+            "❌ Failed to fetch connected devices:",
             error
         );
 
@@ -1230,34 +1932,1121 @@ async function updateDashboard() {
 
 
 // ============================================================
-// INITIALIZE DASHBOARD
+// FETCH DASHBOARD STATS
 // ============================================================
 
-function initializeDashboard() {
+async function fetchDashboardStats() {
 
-    createTrafficChart();
+    const response =
+        await fetch(
+            "/api/stats",
+            {
+                method: "GET",
+                cache: "no-store",
+                headers: {
+                    "Accept":
+                        "application/json"
+                }
+            }
+        );
 
-    createAttackChart();
 
-    // ============================================================
-    // MONITORING CONTROL BUTTONS
-    // ============================================================
+    if (!response.ok) {
 
-    const startButton = document.getElementById(
-        "start-monitoring-btn"
+        throw new Error(
+            `HTTP ${response.status}`
+        );
+
+    }
+
+
+    return await response.json();
+
+}
+
+
+// ============================================================
+// FETCH PROTOCOL STATS
+// ============================================================
+
+async function fetchProtocolStats() {
+
+    const response =
+        await fetch(
+            "/api/protocols",
+            {
+                method: "GET",
+                cache: "no-store",
+                headers: {
+                    "Accept":
+                        "application/json"
+                }
+            }
+        );
+
+
+    if (!response.ok) {
+
+        throw new Error(
+            `Protocol API HTTP ${response.status}`
+        );
+
+    }
+
+
+    return await response.json();
+
+}
+
+
+// ============================================================
+// FETCH SECURITY OVERVIEW
+// ============================================================
+
+async function fetchSecurityOverview() {
+
+    const response = await fetch(
+        "/api/security-overview",
+        {
+            method: "GET",
+            cache: "no-store",
+            headers: {
+                "Accept": "application/json"
+            }
+        }
     );
 
-    const stopButton = document.getElementById(
-        "stop-monitoring-btn"
+    if (!response.ok) {
+
+        throw new Error(
+            `Security Overview API HTTP ${response.status}`
+        );
+
+    }
+
+    const result = await response.json();
+
+    console.log(
+        "🛡️ Security Overview API:",
+        result
     );
 
-    const clearButton = document.getElementById(
-        "clear-data-btn"
+    return result;
+
+}
+
+// ============================================================
+// UPDATE SECURITY OVERVIEW
+// ============================================================
+
+function updateSecurityOverview(response) {
+
+    if (!response) {
+        return;
+    }
+
+
+    // ========================================================
+    // SUPPORT BOTH API FORMATS
+    // ========================================================
+    //
+    // Format 1:
+    // {
+    //     score: 85,
+    //     status: "WARNING",
+    //     ...
+    // }
+    //
+    // Format 2:
+    // {
+    //     success: true,
+    //     overview: {
+    //         score: 85,
+    //         status: "WARNING",
+    //         ...
+    //     }
+    // }
+    // ========================================================
+
+    const data =
+        response.overview &&
+        typeof response.overview === "object"
+            ? response.overview
+            : response;
+
+
+    // ========================================================
+    // SECURITY SCORE
+    // ========================================================
+
+    const score =
+        Math.max(
+            0,
+            Math.min(
+                100,
+                Number(data.score ?? 0)
+            )
+        );
+
+
+    if (securityScore) {
+
+        securityScore.textContent =
+            score;
+
+    }
+
+
+    // ========================================================
+    // SECURITY METRICS
+    // ========================================================
+
+    const totalPackets =
+        Number(
+            data.total_packets ?? 0
+        );
+
+    const totalAlerts =
+        Number(
+            data.total_alerts ?? 0
+        );
+
+    const highAlerts =
+        Number(
+            data.high_alerts ?? 0
+        );
+
+    const mediumAlerts =
+        Number(
+            data.medium_alerts ?? 0
+        );
+
+    const lowAlerts =
+        Number(
+            data.low_alerts ?? 0
+        );
+
+    const totalDevices =
+        Number(
+            data.total_devices ?? 0
+        );
+
+
+    if (securityPackets) {
+
+        securityPackets.textContent =
+            totalPackets.toLocaleString();
+
+    }
+
+
+    if (securityAlerts) {
+
+        securityAlerts.textContent =
+            totalAlerts.toLocaleString();
+
+    }
+
+
+    if (securityHigh) {
+
+        securityHigh.textContent =
+            highAlerts.toLocaleString();
+
+    }
+
+
+    if (securityMedium) {
+
+        securityMedium.textContent =
+            mediumAlerts.toLocaleString();
+
+    }
+
+
+    if (securityLow) {
+
+        securityLow.textContent =
+            lowAlerts.toLocaleString();
+
+    }
+
+
+    if (securityDevices) {
+
+        securityDevices.textContent =
+            totalDevices.toLocaleString();
+
+    }
+
+
+    // ========================================================
+    // SECURITY STATUS
+    // ========================================================
+    //
+    // IMPORTANT:
+    // Do NOT blindly trust data.status from backend.
+    // Derive the visual status from actual alert counts.
+    // ========================================================
+
+    const state =
+        getSecurityState({
+
+            monitoring_active:
+                data.monitoring_active !== false,
+
+            high:
+                highAlerts,
+
+            medium:
+                mediumAlerts
+
+        });
+
+
+    const statusLevel =
+        state.level;
+
+
+    const statusText =
+        statusLevel === "critical"
+            ? "CRITICAL"
+            : statusLevel === "warning"
+                ? "WARNING"
+                : statusLevel === "stopped"
+                    ? "STOPPED"
+                    : "SECURE";
+
+
+    // --------------------------------------------------------
+    // Status text
+    // --------------------------------------------------------
+
+    if (securityStatus) {
+
+        securityStatus.textContent =
+            statusText;
+
+    }
+
+
+    // --------------------------------------------------------
+    // Status badge
+    // --------------------------------------------------------
+
+    if (securityStatusBadge) {
+
+        securityStatusBadge.classList.remove(
+            "secure",
+            "warning",
+            "critical",
+            "stopped"
+        );
+
+        securityStatusBadge.classList.add(
+            statusLevel
+        );
+
+    }
+
+
+    // --------------------------------------------------------
+    // Status dot
+    // --------------------------------------------------------
+
+    if (securityStatusDot) {
+
+        securityStatusDot.className =
+            "";
+
+        securityStatusDot.classList.add(
+            statusLevel
+        );
+
+    }
+
+
+    // ========================================================
+    // MOST COMMON ATTACK
+    // ========================================================
+
+    if (securityTopAttack) {
+
+        securityTopAttack.textContent =
+            data.top_attack || "NONE";
+
+    }
+
+
+    if (securityTopAttackCount) {
+
+        const count =
+            Number(
+                data.top_attack_count ?? 0
+            );
+
+
+        securityTopAttackCount.textContent =
+            `${count.toLocaleString()} occurrence${count === 1 ? "" : "s"}`;
+
+    }
+
+
+    // ========================================================
+    // LATEST THREAT
+    // ========================================================
+
+    const latestThreat =
+        data.latest_threat;
+
+
+    if (!latestThreat) {
+
+        if (securityLatestThreat) {
+
+            securityLatestThreat.textContent =
+                "No threats detected";
+
+        }
+
+
+        if (securityLatestTime) {
+
+            securityLatestTime.textContent =
+                "—";
+
+        }
+
+    }
+
+    else {
+
+        if (securityLatestThreat) {
+
+            securityLatestThreat.textContent =
+                latestThreat.message ||
+                latestThreat.type ||
+                "Security threat detected";
+
+        }
+
+
+        if (securityLatestTime) {
+
+            securityLatestTime.textContent =
+                latestThreat.timestamp ||
+                "—";
+
+        }
+
+    }
+
+
+    // ========================================================
+    // RECOMMENDATION
+    // ========================================================
+
+    if (securityRecommendation) {
+
+        securityRecommendation.textContent =
+            data.recommendation ||
+            "Continue monitoring network activity.";
+
+    }
+
+
+    // ========================================================
+    // DEBUG
+    // ========================================================
+
+    console.log(
+        "🛡️ Security Overview updated:",
+        {
+            score,
+            status: statusText,
+            statusLevel,
+            totalPackets,
+            totalAlerts,
+            highAlerts,
+            mediumAlerts,
+            lowAlerts,
+            totalDevices
+        }
     );
 
-    // ============================================================
-    // ALERT FILTER CONTROLS
-    // ============================================================
+}
+
+// ============================================================
+// EXPORT SECURITY REPORT
+// ============================================================
+
+async function exportSecurityReport() {
+
+    const button = document.getElementById(
+        "export-security-report-btn"
+    );
+
+    if (!button) {
+
+        console.error(
+            "Export Security Report button not found."
+        );
+
+        return;
+
+    }
+
+
+    const originalText =
+        button.innerHTML;
+
+
+    try {
+
+        // ----------------------------------------------------
+        // DISABLE BUTTON
+        // ----------------------------------------------------
+
+        button.disabled = true;
+
+        button.innerHTML =
+            "⏳ Generating Report...";
+
+
+        // ----------------------------------------------------
+        // REQUEST PDF
+        // ----------------------------------------------------
+
+        const response = await fetch(
+            "/api/export-security-report"
+        );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Failed to generate security report."
+            );
+
+        }
+
+
+        // ----------------------------------------------------
+        // CONVERT RESPONSE TO BLOB
+        // ----------------------------------------------------
+
+        const blob =
+            await response.blob();
+
+
+        // ----------------------------------------------------
+        // CREATE DOWNLOAD URL
+        // ----------------------------------------------------
+
+        const url =
+            window.URL.createObjectURL(blob);
+
+
+        // ----------------------------------------------------
+        // CREATE TEMPORARY DOWNLOAD LINK
+        // ----------------------------------------------------
+
+        const link =
+            document.createElement("a");
+
+
+        link.href = url;
+
+        link.download =
+            "Mini_IDS_Security_Report.pdf";
+
+
+        document.body.appendChild(
+            link
+        );
+
+
+        link.click();
+
+
+        // ----------------------------------------------------
+        // CLEANUP
+        // ----------------------------------------------------
+
+        link.remove();
+
+        window.URL.revokeObjectURL(
+            url
+        );
+
+
+        // ----------------------------------------------------
+        // SUCCESS NOTIFICATION
+        // ----------------------------------------------------
+
+        showNotification(
+            "Security report exported successfully.",
+            "success"
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Security report export error:",
+            error
+        );
+
+
+        showNotification(
+            "Unable to export security report.",
+            "error"
+        );
+
+
+    } finally {
+
+        // ----------------------------------------------------
+        // RESTORE BUTTON
+        // ----------------------------------------------------
+
+        button.disabled = false;
+
+        button.innerHTML =
+            originalText;
+
+    }
+
+}
+// ============================================================
+// UPDATE DASHBOARD
+// ============================================================
+
+async function updateDashboard() {
+
+    try {
+
+        // ====================================================
+        // MAIN STATS
+        // ====================================================
+
+        const stats =
+            await fetchDashboardStats();
+
+
+        updateSummaryCards(
+            stats
+        );
+
+
+        updateSystemStatus(
+            stats
+        );
+
+
+        updateControlButtons(
+            stats
+        );
+
+
+        updateTrafficChart(
+            stats
+        );
+
+
+        updateAttackChart(
+            stats
+        );
+
+
+        // ====================================================
+        // PROTOCOL ANALYTICS
+        // ====================================================
+
+        try {
+
+            const protocolStats =
+                await fetchProtocolStats();
+
+
+            updateProtocolAnalytics(
+                protocolStats
+            );
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "❌ Protocol analytics failed:",
+                error
+            );
+
+        }
+
+
+        // ====================================================
+        // SECURITY OVERVIEW
+        // ====================================================
+
+        try {
+
+            const securityOverview =
+                await fetchSecurityOverview();
+
+
+            updateSecurityOverview(
+                securityOverview
+            );
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "❌ Security Overview failed:",
+                error
+            );
+
+        }
+
+
+        // ====================================================
+        // CONNECTED DEVICES
+        // ====================================================
+
+        await updateConnectedDevices();
+
+
+        // ====================================================
+        // ALERTS
+        // ====================================================
+
+        updateAlertTable(
+            stats
+        );
+
+
+        updateAttackTypeFilter(
+            stats
+        );
+
+
+        detectNewAlerts(
+            stats
+        );
+
+
+        console.log(
+            "🛡️ IDS dashboard updated."
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "❌ Dashboard update failed:",
+            error
+        );
+
+    }
+
+}
+
+
+// ============================================================
+// START MONITORING
+// ============================================================
+
+async function startMonitoring() {
+
+    if (!startButton) {
+
+        console.error(
+            "❌ Start button not found."
+        );
+
+        return;
+
+    }
+
+
+    startButton.disabled =
+        true;
+
+
+    try {
+
+        console.log(
+            "▶ Starting IDS monitoring..."
+        );
+
+
+        const response =
+            await fetch(
+                "/api/monitor/start",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                        "Accept":
+                            "application/json"
+                    }
+                }
+            );
+
+
+        const result =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                result.message ||
+                "Unable to start monitoring"
+            );
+
+        }
+
+
+        clearTrafficChart();
+
+
+        showNotification(
+            result.message ||
+            "IDS monitoring started successfully.",
+            "success"
+        );
+
+
+        await updateDashboard();
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "❌ Start monitoring failed:",
+            error
+        );
+
+
+        showNotification(
+            "Failed to start IDS monitoring: " +
+            error.message,
+            "error"
+        );
+
+    }
+
+}
+
+
+// ============================================================
+// STOP MONITORING
+// ============================================================
+
+async function stopMonitoring() {
+
+    if (!stopButton) {
+
+        console.error(
+            "❌ Stop button not found."
+        );
+
+        return;
+
+    }
+
+
+    stopButton.disabled =
+        true;
+
+
+    try {
+
+        console.log(
+            "⏹ Stopping IDS monitoring..."
+        );
+
+
+        const response =
+            await fetch(
+                "/api/monitor/stop",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                        "Accept":
+                            "application/json"
+                    }
+                }
+            );
+
+
+        const result =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                result.message ||
+                "Unable to stop monitoring"
+            );
+
+        }
+
+
+        showNotification(
+            result.message ||
+            "IDS monitoring stopped.",
+            "warning"
+        );
+
+
+        await updateDashboard();
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "❌ Stop monitoring failed:",
+            error
+        );
+
+
+        showNotification(
+            "Failed to stop IDS monitoring: " +
+            error.message,
+            "error"
+        );
+
+    }
+
+}
+
+
+// ============================================================
+// CLEAR IDS DATA
+// ============================================================
+
+async function clearIDSData() {
+
+    if (!clearButton) {
+
+        console.error(
+            "❌ Clear button not found."
+        );
+
+        return;
+
+    }
+
+
+    const confirmed =
+        window.confirm(
+            "Are you sure you want to clear all IDS data?"
+        );
+
+
+    if (!confirmed) {
+
+        return;
+
+    }
+
+
+    clearButton.disabled =
+        true;
+
+
+    try {
+
+        console.log(
+            "🗑 Clearing IDS data..."
+        );
+
+
+        const response =
+            await fetch(
+                "/api/reset",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                        "Accept":
+                            "application/json"
+                    }
+                }
+            );
+
+
+        const result =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                result.message ||
+                "Unable to clear IDS data"
+            );
+
+        }
+
+
+        // ====================================================
+        // CLEAR TRAFFIC
+        // ====================================================
+
+        clearTrafficChart();
+
+
+        // ====================================================
+        // CLEAR ATTACK CHART
+        // ====================================================
+
+        if (attackChart) {
+
+            attackChart.data.labels =
+                [];
+
+            attackChart.data.datasets[0].data =
+                [];
+
+            attackChart.update("none");
+
+        }
+
+
+        // ====================================================
+        // CLEAR PROTOCOL CHART
+        // ====================================================
+
+        if (protocolChart) {
+
+            protocolChart.data.labels =
+                [];
+
+            protocolChart.data.datasets[0].data =
+                [];
+
+            protocolChart.update("none");
+
+        }
+
+
+        // ====================================================
+        // CLEAR ALERTS
+        // ====================================================
+
+        currentAlerts =
+            [];
+
+
+        knownAlertIds.clear();
+
+
+        // ====================================================
+        // RESET FILTERS
+        // ====================================================
+
+        resetFilters();
+
+
+        showNotification(
+            result.message ||
+            "All IDS data cleared successfully.",
+            "success"
+        );
+
+
+        await updateDashboard();
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "❌ Clear IDS data failed:",
+            error
+        );
+
+
+        showNotification(
+            "Failed to clear IDS data: " +
+            error.message,
+            "error"
+        );
+
+    }
+
+    finally {
+
+        clearButton.disabled =
+            false;
+
+    }
+
+}
+
+
+// ============================================================
+// RESET ALERT FILTERS
+// ============================================================
+
+function resetFilters(event) {
+
+    if (event) {
+
+        event.preventDefault();
+
+        event.stopPropagation();
+
+    }
+
+
+    if (severityFilter) {
+
+        severityFilter.value =
+            "ALL";
+
+    }
+
+
+    if (typeFilter) {
+
+        typeFilter.value =
+            "ALL";
+
+    }
+
+
+    if (ipFilter) {
+
+        ipFilter.value =
+            "";
+
+    }
+
+
+    renderAlertTable();
+
+}
+
+
+// ============================================================
+// INITIALIZE FILTER EVENTS
+// ============================================================
+
+function initializeFilters() {
 
     if (severityFilter) {
 
@@ -1278,6 +3067,7 @@ function initializeDashboard() {
 
     }
 
+
     if (ipFilter) {
 
         ipFilter.addEventListener(
@@ -1292,272 +3082,215 @@ function initializeDashboard() {
 
         resetAlertFilters.addEventListener(
             "click",
-            () => {
+            resetFilters
+        );
 
-                if (severityFilter) {
+    }
 
-                    severityFilter.value =
-                        "ALL";
-
-                }
+}
 
 
-                if (typeFilter) {
+// ============================================================
+// INITIALIZE CONTROL EVENTS
+// ============================================================
 
-                    typeFilter.value =
-                        "ALL";
+function initializeControls() {
 
-                }
+    if (startButton) {
 
-                if (ipFilter) {
-                    ipFilter.value = "";
-                }
-
-                renderAlertTable();
-
-            }
+        startButton.addEventListener(
+            "click",
+            startMonitoring
         );
 
     }
 
 
-    // ------------------------------------------------------------
-    // START MONITORING
-    // ------------------------------------------------------------
+    if (stopButton) {
 
-    startButton.addEventListener(
-        "click",
-        async () => {
+        stopButton.addEventListener(
+            "click",
+            stopMonitoring
+        );
 
-            try {
-
-                const response =
-                    await fetch(
-                        "/api/monitor/start",
-                        {
-                            method: "POST"
-                        }
-                    );
+    }
 
 
-                const result =
-                    await response.json();
+    if (clearButton) {
+
+        clearButton.addEventListener(
+            "click",
+            clearIDSData
+        );
+
+    }
 
 
-                if (!response.ok) {
-
-                    throw new Error(
-                        result.message ||
-                        "Unable to start monitoring"
-                    );
-
-                }
-
-
-                // ------------------------------------------------
-                // Start a fresh traffic session
-                // ------------------------------------------------
-
-                trafficLabels.length = 0;
-
-                packetData.length = 0;
-
-                if (trafficChart) {
-
-                    trafficChart.update("none");
-
-                }
-
-
-                showNotification(
-                    result.message ||
-                    "IDS monitoring started successfully",
-                    "success"
-                );
-
-
-                await updateDashboard();
-
-            }
-
-            catch (error) {
-
-                console.error(
-                    "Failed to start monitoring:",
-                    error
-                );
-
-                showNotification(
-                    "Failed to start IDS monitoring",
-                    "error"
-                );
-
-            }
-
-        }
+    console.log(
+        "🎛️ Dashboard controls initialized."
     );
 
-
-    // ------------------------------------------------------------
-    // STOP MONITORING
-    // ------------------------------------------------------------
-
-    stopButton.addEventListener(
-        "click",
-        async () => {
-
-            try {
-
-                const response =
-                    await fetch(
-                        "/api/monitor/stop",
-                        {
-                            method: "POST"
-                        }
-                    );
-
-
-                const result =
-                    await response.json();
-
-
-                if (!response.ok) {
-
-                    throw new Error(
-                        result.message ||
-                        "Unable to stop monitoring"
-                    );
-
-                }
-
-
-                showNotification(
-                    result.message ||
-                    "IDS monitoring stopped",
-                    "warning"
-                );
-
-
-                await updateDashboard();
-
-            }
-
-            catch (error) {
-
-                console.error(
-                    "Failed to stop monitoring:",
-                    error
-                );
-
-
-                showNotification(
-                    "Failed to stop IDS monitoring",
-                    "error"
-                );
-
-            }
-
-        }
-    );
-
-
-    // ------------------------------------------------------------
-    // CLEAR IDS DATA
-    // ------------------------------------------------------------
-
-    clearButton.addEventListener(
-        "click",
-        async () => {
-
-            const confirmed = confirm(
-                "Are you sure you want to clear all IDS data?"
-            );
-
-            if (!confirmed) {
-
-                return;
-
-            }
-
-
-            try {
-
-                const response = await fetch(
-                    "/api/reset",
-                    {
-                        method: "POST"
-                    }
-                );
-
-                const result = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(
-                        result.message || "Unable to clear IDS data"
-                    );
-                }
-
-                showNotification(
-                    result.message ||
-                    "All IDS data cleared successfully",
-                    "success"
-                );
-
-                console.log(result.message);
-
-
-                // Clear traffic graph immediately
-                trafficLabels.length = 0;
-
-                packetData.length = 0;
-
-                trafficChart.update();
-
-
-                // Clear attack chart immediately
-                attackChart.data.labels = [];
-
-                attackChart.data.datasets[0].data = [];
-
-                attackChart.update("none");
-
-                // Refresh dashboard
-                await updateDashboard();
-
-            }
-
-            catch (error) {
-
-                console.error(
-                    "Failed to clear IDS data:",
-                    error
-                );
-
-            }
-
-        }
-    );
-
-    updateDashboard().then(() => {
-
-        dashboardInitialized = true;
-
-    });
 }
-// Refresh every 3 seconds
-
-setInterval(
-    updateDashboard,
-    3000
-);
-
 
 
 // ============================================================
-// START
+// INITIALIZE DASHBOARD
+// ============================================================
+
+async function initializeDashboard() {
+
+    console.log(
+        "🛡️ Initializing Mini IDS Dashboard..."
+    );
+
+
+    // ========================================================
+    // DOM
+    // ========================================================
+
+    initializeDOM();
+
+
+    // ========================================================
+    // CHARTS
+    // ========================================================
+
+    createTrafficChart();
+
+    createAttackChart();
+
+    createProtocolChart();
+
+
+    // ========================================================
+    // FILTERS
+    // ========================================================
+
+    initializeFilters();
+
+
+    // ========================================================
+    // CONTROLS
+    // ========================================================
+
+    initializeControls();
+
+
+    // ========================================================
+    // FIRST UPDATE
+    // ========================================================
+
+    await updateDashboard();
+
+
+    // ========================================================
+    // MARK EXISTING ALERTS AS KNOWN
+    // ========================================================
+
+    currentAlerts.forEach(
+        alert => {
+
+            knownAlertIds.add(
+                createAlertFingerprint(
+                    alert
+                )
+            );
+
+        }
+    );
+
+
+    dashboardInitialized =
+        true;
+
+
+    console.log(
+        "✅ Mini IDS Dashboard initialized successfully."
+    );
+
+}
+
+
+// ============================================================
+// START AUTO REFRESH
+// ============================================================
+
+function startAutoRefresh() {
+
+    if (refreshTimer) {
+
+        clearInterval(
+            refreshTimer
+        );
+
+    }
+
+
+    refreshTimer =
+        setInterval(
+            updateDashboard,
+            REFRESH_INTERVAL
+        );
+
+
+    console.log(
+        `🔄 Auto refresh started: every ${REFRESH_INTERVAL / 1000}s`
+    );
+
+}
+
+
+// ============================================================
+// STOP AUTO REFRESH
+// ============================================================
+
+function stopAutoRefresh() {
+
+    if (refreshTimer) {
+
+        clearInterval(
+            refreshTimer
+        );
+
+        refreshTimer =
+            null;
+
+    }
+
+}
+
+
+// ============================================================
+// PAGE LOAD
 // ============================================================
 
 document.addEventListener(
     "DOMContentLoaded",
-    initializeDashboard
-);
+    async () => {
+
+        await initializeDashboard();
+
+        startAutoRefresh();
+
+
+        // ====================================================
+        // EXPORT SECURITY REPORT
+        // ====================================================
+
+        const exportButton =
+            document.getElementById(
+                "export-security-report-btn"
+            );
+
+
+        if (exportButton) {
+
+            exportButton.addEventListener(
+                "click",
+                exportSecurityReport
+            );
+
+        }
+
+    }
+)

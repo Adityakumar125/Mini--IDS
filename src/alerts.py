@@ -1,62 +1,77 @@
 import sys
 import os
+from datetime import datetime
 
-sys.path.append(
+
+# ============================================================
+# PROJECT ROOT
+# ============================================================
+
+BASE_DIR = os.path.dirname(
     os.path.dirname(
-        os.path.dirname(
-            os.path.abspath(__file__)
-        )
+        os.path.abspath(__file__)
     )
 )
+
+if BASE_DIR not in sys.path:
+    sys.path.insert(
+        0,
+        BASE_DIR
+    )
+
+
+# ============================================================
+# DATABASE
+# ============================================================
 
 from data.ids_data import record_alert
 
 
-def generate_alert(alert):
+# ============================================================
+# GENERATE ALERT
+# ============================================================
 
-    # --------------------------------------------------
-    # Validate alert
-    # --------------------------------------------------
+def generate_alert(alert):
 
     if not alert:
         return
 
-    # --------------------------------------------------
-    # Store alert in SQLite
-    # --------------------------------------------------
+    timestamp = datetime.now().strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
 
-    alert_id = record_alert(alert)
+    # Save alert to database
 
-    # --------------------------------------------------
+    record_alert(alert)
+
     # Console output
-    # --------------------------------------------------
 
     print("\n" + "=" * 60)
     print("🚨 SECURITY ALERT")
     print("=" * 60)
 
     print(
-        f"Alert ID  : {alert_id}"
+        f"Time      : {timestamp}"
     )
 
     print(
-        f"Time      : {alert.get('timestamp', '-')}"
+        f"Type      : "
+        f"{alert.get('type', 'UNKNOWN')}"
     )
 
     print(
-        f"Type      : {alert.get('type', 'UNKNOWN')}"
+        f"Severity  : "
+        f"{alert.get('severity', 'MEDIUM')}"
     )
 
     print(
-        f"Severity  : {alert.get('severity', 'MEDIUM')}"
+        f"Source IP : "
+        f"{alert.get('source_ip', '-')}"
     )
 
     print(
-        f"Source IP : {alert.get('source_ip', '-')}"
-    )
-
-    print(
-        f"Message   : {alert.get('message', '-')}"
+        f"Message   : "
+        f"{alert.get('message', '-')}"
     )
 
     print("=" * 60)
